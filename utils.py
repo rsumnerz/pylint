@@ -238,7 +238,7 @@ class MessagesHandlerMixIn(object):
             msgs = self._msgs_state
             msgs[msg.msgid] = False
             # sync configuration object
-            self.config.disable_msg = [mid for mid, val in msgs.iteritems()
+            self.config.disable_msg = [mid for mid, val in six.iteritems(msgs)
                                        if not val]
 
     def enable(self, msgid, scope='package', line=None, ignore_unknown=False):
@@ -276,7 +276,7 @@ class MessagesHandlerMixIn(object):
             msgs = self._msgs_state
             msgs[msg.msgid] = True
             # sync configuration object
-            self.config.enable = [mid for mid, val in msgs.iteritems() if val]
+            self.config.enable = [mid for mid, val in six.iteritems(msgs) if val]
 
     def is_message_enabled(self, msg_descr, line=None):
         """return true if the message associated to the given message id is
@@ -381,7 +381,7 @@ class MessagesHandlerMixIn(object):
                     by_checker[checker.name] = [list(checker.options_and_values()),
                                                 dict(checker.msgs),
                                                 list(checker.reports)]
-        for checker, (options, msgs, reports) in by_checker.iteritems():
+        for checker, (options, msgs, reports) in six.iteritems(by_checker):
             prefix = ''
             title = '%s checker' % checker
             print title
@@ -424,7 +424,7 @@ class FileState(object):
 
     def collect_block_lines(self, msgs_store, module_node):
         """Walk the AST to collect block level options line numbers."""
-        for msg, lines in self._module_msgs_state.iteritems():
+        for msg, lines in six.iteritems(self._module_msgs_state):
             self._raw_module_msgs_state[msg] = lines.copy()
         orig_state = self._module_msgs_state.copy()
         self._module_msgs_state = {}
@@ -458,7 +458,7 @@ class FileState(object):
             firstchildlineno = node.body[0].fromlineno
         else:
             firstchildlineno = last
-        for msgid, lines in msg_state.iteritems():
+        for msgid, lines in six.iteritems(msg_state):
             for lineno, state in lines.items():
                 original_lineno = lineno
                 if first <= lineno <= last:
@@ -471,7 +471,7 @@ class FileState(object):
                     else:
                         first_ = lineno
                         last_ = last
-                    for line in xrange(first_, last_+1):
+                    for line in range(first_, last_+1):
                         # do not override existing entries
                         if not line in self._module_msgs_state.get(msgid, ()):
                             if line in lines: # state change in the same block
@@ -517,8 +517,8 @@ class FileState(object):
             return MSG_STATE_SCOPE_CONFIG
 
     def iter_spurious_suppression_messages(self, msgs_store):
-        for warning, lines in self._raw_module_msgs_state.iteritems():
-            for line, enable in lines.iteritems():
+        for warning, lines in six.iteritems(self._raw_module_msgs_state):
+            for line, enable in six.iteritems(lines):
                 if not enable and (warning, line) not in self._ignored_msgs:
                     yield 'useless-suppression', line, \
                         (msgs_store.get_msg_display_string(warning),)
@@ -549,7 +549,7 @@ class MessagesStore(object):
     @property
     def messages(self):
         """The list of all active messages."""
-        return self._messages.itervalues()
+        return six.itervalues(self._messages)
 
     def add_renamed_message(self, old_id, old_symbol, new_symbol):
         """Register the old ID and symbol for a warning that was renamed.
@@ -571,7 +571,7 @@ class MessagesStore(object):
         are the checker id and the two last the message id in this checker
         """
         chkid = None
-        for msgid, msg_tuple in checker.msgs.iteritems():
+        for msgid, msg_tuple in six.iteritems(checker.msgs):
             msg = build_message_def(checker, msgid, msg_tuple)
             assert msg.symbol not in self._messages, \
                     'Message symbol %r is already defined' % msg.symbol
@@ -624,7 +624,7 @@ class MessagesStore(object):
 
     def list_messages(self):
         """output full messages list documentation in ReST format"""
-        msgs = sorted(self._messages.itervalues(), key=lambda msg: msg.msgid)
+        msgs = sorted(six.itervalues(self._messages), key=lambda msg: msg.msgid)
         for msg in msgs:
             if not msg.may_be_emitted():
                 continue
@@ -688,7 +688,7 @@ class ReportsHandlerMixIn(object):
         """add some stats entries to the statistic dictionary
         raise an AssertionError if there is a key conflict
         """
-        for key, value in kwargs.iteritems():
+        for key, value in six.iteritems(kwargs):
             if key[-1] == '_':
                 key = key[:-1]
             assert key not in self.stats

@@ -42,7 +42,7 @@ def in_for_else_branch(parent, stmt):
 def overridden_method(klass, name):
     """get overridden method if any"""
     try:
-        parent = klass.local_attr_ancestors(name).next()
+        parent = next(klass.local_attr_ancestors(name))
     except (StopIteration, KeyError):
         return None
     try:
@@ -261,7 +261,7 @@ builtins. Remember that you should avoid to define new builtins when possible.'
         checks globals doesn't overrides builtins
         """
         self._to_consume = [(copy(node.locals), {}, 'module')]
-        for name, stmts in node.locals.iteritems():
+        for name, stmts in six.iteritems(node.locals):
             if is_builtin(name) and not is_inside_except(stmts[0]):
                 # do not print Redefining builtin for additional builtins
                 self.add_message('redefined-builtin', args=name, node=stmts[0])
@@ -274,11 +274,11 @@ builtins. Remember that you should avoid to define new builtins when possible.'
         not_consumed = self._to_consume.pop()[0]
         # attempt to check for __all__ if defined
         if '__all__' in node.locals:
-            assigned = node.igetattr('__all__').next()
+            assigned = next(node.igetattr('__all__'))
             if assigned is not astroid.YES:
                 for elt in getattr(assigned, 'elts', ()):
                     try:
-                        elt_name = elt.infer().next()
+                        elt_name = next(elt.infer())
                     except astroid.InferenceError:
                         continue
 
@@ -428,7 +428,7 @@ builtins. Remember that you should avoid to define new builtins when possible.'
         for nonlocal_stmt in node.nodes_of_class(astroid.Nonlocal):
             nonlocal_names.update(set(nonlocal_stmt.names))
 
-        for name, stmts in not_consumed.iteritems():
+        for name, stmts in six.iteritems(not_consumed):
             # ignore some special names specified by user configuration
             if authorized_rgx.match(name):
                 continue
@@ -753,7 +753,7 @@ builtins. Remember that you should avoid to define new builtins when possible.'
         for name, _ in node.names:
             parts = name.split('.')
             try:
-                module = node.infer_name_module(parts[0]).next()
+                module = next(node.infer_name_module(parts[0]))
             except astroid.ResolveError:
                 continue
             self._check_module_attrs(node, module, parts[1:])
@@ -840,7 +840,7 @@ builtins. Remember that you should avoid to define new builtins when possible.'
                 module = None
                 break
             try:
-                module = module.getattr(name)[0].infer().next()
+                module = next(module.getattr(name)[0].infer())
                 if module is astroid.YES:
                     return None
             except astroid.NotFoundError:

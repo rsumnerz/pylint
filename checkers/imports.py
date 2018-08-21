@@ -98,14 +98,14 @@ def dependencies_graph(filename, dep_info):
     done = {}
     printer = DotBackend(filename[:-4], rankdir='LR')
     printer.emit('URL="." node[shape="box"]')
-    for modname, dependencies in sorted(dep_info.iteritems()):
+    for modname, dependencies in sorted(six.iteritems(dep_info)):
         done[modname] = 1
         printer.emit_node(modname)
         for modname in dependencies:
             if modname not in done:
                 done[modname] = 1
                 printer.emit_node(modname)
-    for depmodname, dependencies in sorted(dep_info.iteritems()):
+    for depmodname, dependencies in sorted(six.iteritems(dep_info)):
         for modname in dependencies:
             printer.emit_edge(modname, depmodname)
     printer.generate(filename)
@@ -273,7 +273,7 @@ given file (report RP0402 must not be disabled)'}
     def get_imported_module(self, modnode, importnode, modname):
         try:
             return importnode.do_import_module(modname)
-        except astroid.InferenceError, ex:
+        except astroid.InferenceError as ex:
             if str(ex) != modname:
                 args = '%r (%s)' % (modname, ex)
             else:
@@ -343,7 +343,7 @@ given file (report RP0402 must not be disabled)'}
 
     def report_external_dependencies(self, sect, _, dummy):
         """return a verbatim layout for displaying dependencies"""
-        dep_info = make_tree_defs(self._external_dependencies_info().iteritems())
+        dep_info = make_tree_defs(six.iteritems(self._external_dependencies_info()))
         if not dep_info:
             raise EmptyReport()
         tree_str = repr_tree_defs(dep_info)
@@ -375,7 +375,7 @@ given file (report RP0402 must not be disabled)'}
         if self.__ext_dep_info is None:
             package = self.linter.current_name
             self.__ext_dep_info = result = {}
-            for importee, importers in self.stats['dependencies'].iteritems():
+            for importee, importers in six.iteritems(self.stats['dependencies']):
                 if not importee.startswith(package):
                     result[importee] = importers
         return self.__ext_dep_info
@@ -387,7 +387,7 @@ given file (report RP0402 must not be disabled)'}
         if self.__int_dep_info is None:
             package = self.linter.current_name
             self.__int_dep_info = result = {}
-            for importee, importers in self.stats['dependencies'].iteritems():
+            for importee, importers in six.iteritems(self.stats['dependencies']):
                 if importee.startswith(package):
                     result[importee] = importers
         return self.__int_dep_info

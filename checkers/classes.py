@@ -271,7 +271,7 @@ a metaclass class method.'}
             return
         defining_methods = self.config.defining_attr_methods
         current_module = cnode.root()
-        for attr, nodes in cnode.instance_attrs.iteritems():
+        for attr, nodes in six.iteritems(cnode.instance_attrs):
             # skip nodes which are not in the current module and it may screw up
             # the output, while it's not worth it
             nodes = [n for n in nodes if not
@@ -560,7 +560,7 @@ a metaclass class method.'}
     def _check_accessed_members(self, node, accessed):
         """check that accessed members are defined"""
         # XXX refactor, probably much simpler now that E0201 is in type checker
-        for attr, nodes in accessed.iteritems():
+        for attr, nodes in six.iteritems(accessed):
             # deactivate "except doesn't do anything", that's expected
             # pylint: disable=W0704
             try:
@@ -572,7 +572,7 @@ a metaclass class method.'}
                 pass
             # is it an instance attribute of a parent class ?
             try:
-                node.instance_attr_ancestors(attr).next()
+                next(node.instance_attr_ancestors(attr))
                 # yes, stop here
                 continue
             except StopIteration:
@@ -760,7 +760,7 @@ a metaclass class method.'}
                expr.expr.func.name == 'super':
                 return
             try:
-                klass = expr.expr.infer().next()
+                klass = next(expr.expr.infer())
                 if klass is YES:
                     continue
                 try:
@@ -770,7 +770,7 @@ a metaclass class method.'}
                         self.add_message('non-parent-init-called', node=expr, args=klass.name)
             except astroid.InferenceError:
                 continue
-        for klass, method in not_called_yet.iteritems():
+        for klass, method in six.iteritems(not_called_yet):
             if klass.name == 'object' or method.parent.name == 'object':
                 continue
             self.add_message('super-init-not-called', args=klass.name, node=node)
@@ -811,7 +811,7 @@ def _ancestors_to_call(klass_node, method='__init__'):
     to_call = {}
     for base_node in klass_node.ancestors(recurs=False):
         try:
-            to_call[base_node] = base_node.igetattr(method).next()
+            to_call[base_node] = next(base_node.igetattr(method))
         except astroid.InferenceError:
             continue
     return to_call

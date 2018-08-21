@@ -82,11 +82,11 @@ def safe_infer(node):
     """
     try:
         inferit = node.infer()
-        value = inferit.next()
+        value = next(inferit)
     except astroid.InferenceError:
         return
     try:
-        inferit.next()
+        next(inferit)
         return # None if there is ambiguity on the inferred node
     except astroid.InferenceError:
         return # there is some kind of ambiguity

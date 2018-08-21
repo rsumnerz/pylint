@@ -39,6 +39,8 @@ from pylint.checkers.utils import (
 
 
 import re
+import six
+from six.moves import zip
 
 # regex for class/function/variable/constant name
 CLASS_NAME_RGX = re.compile('[A-Z_][a-zA-Z0-9]+$')
@@ -151,7 +153,7 @@ def decorated_with_abc(func):
     if func.decorators:
         for node in func.decorators.nodes:
             try:
-                infered = node.infer().next()
+                infered = next(node.infer())
             except InferenceError:
                 continue
             if infered and infered.qname() in ABC_METHODS:
@@ -356,7 +358,7 @@ class BasicErrorChecker(_BasicChecker):
         abc.ABCMeta as metaclass.
         """
         try:
-            infered = node.func.infer().next()
+            infered = next(node.func.infer())
         except astroid.InferenceError:
             return
         if not isinstance(infered, astroid.Class):
@@ -628,7 +630,7 @@ functions, methods
         # ordinary_args[i].name == call.args[i].name.
         if len(ordinary_args) != len(call.args):
             return
-        for i in xrange(len(ordinary_args)):
+        for i in range(len(ordinary_args)):
             if not isinstance(call.args[i], astroid.Name):
                 return
             if node.args.args[i].name != call.args[i].name:
@@ -649,7 +651,7 @@ functions, methods
         # check for dangerous default values as arguments
         for default in node.args.defaults:
             try:
-                value = default.infer().next()
+                value = next(default.infer())
             except astroid.InferenceError:
                 continue
                 
@@ -814,7 +816,7 @@ functions, methods
                 # try to see if we have iter()
                 if isinstance(node.args[0], astroid.CallFunc):
                     try:
-                        func = node.args[0].func.infer().next()
+                        func = next(node.args[0].func.infer())
                     except InferenceError:
                         return
                     if (getattr(func, 'name', None) == 'iter' and
@@ -867,7 +869,7 @@ _NAME_TYPES = {
 
 def _create_naming_options():
     name_options = []
-    for name_type, (rgx, human_readable_name) in _NAME_TYPES.iteritems():
+    for name_type, (rgx, human_readable_name) in six.iteritems(_NAME_TYPES):
         name_type = name_type.replace('_', '-')
         name_options.append((
             '%s-rgx' % (name_type,),
@@ -942,7 +944,7 @@ class NameChecker(_BasicChecker):
     @check_messages('blacklisted-name', 'invalid-name')
     def visit_class(self, node):
         self._check_name('class', node.name, node)
-        for attr, anodes in node.instance_attrs.iteritems():
+        for attr, anodes in six.iteritems(node.instance_attrs):
             if not list(node.instance_attr_ancestors(attr)):
                 self._check_name('attr', attr, anodes[0])
 
