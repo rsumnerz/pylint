@@ -168,6 +168,16 @@ Create a graph of external dependencies in the given file (report R0402 must not
 .IP "--int-import-graph=<file.dot>"
 Create a graph of internal dependencies in the given file (report R0402 must not be disabled) [current: %default]
 
+.SH IMPORTS
+.IP "--deprecated-modules=<modules>"
+Deprecated modules which should not be used, separated by a comma
+.IP "--import-graph=<file.dot>"
+Create a graph of every (i.e. internal and external) dependencies in the given file (report R0402 must not be disabled)
+.IP "--ext-import-graph=<file.dot>"
+Create a graph of external dependencies in the given file (report R0402 must not be disabled)
+.IP "--int-import-graph=<file.dot>"
+Create a graph of internal dependencies in the given file (report R0402 must not be disabled)
+
 .SH MISCELLANEOUS
 .IP "--notes=<comma separated values>"
 List of note tags to take in consideration, separated by a comma. [current: %default]
