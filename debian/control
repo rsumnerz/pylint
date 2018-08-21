@@ -1,22 +1,28 @@
 Source: pylint
 Section: python
 Priority: optional
-Maintainer: Sylvain Thénault <sylvain.thenault@logilab.fr>
-Uploaders: Alexandre Fayolle <afayolle@debian.org> 
-Build-Depends: debhelper (>= 5.0.38)
-Build-Depends-Indep: python (>=2.3.5-7), python-central (>=0.5.6)
-Standards-Version: 3.7.3
-Homepage: http://www.logilab.org/Project/name/pylint
-XS-Python-Version: all
+Maintainer: Logilab S.A. <contact@logilab.fr>
+Uploaders: Sylvain Thénault <sylvain.thenault@logilab.fr>,
+           Alexandre Fayolle <afayolle@debian.org>,
+	   Sandro Tosi <morph@debian.org>
+Build-Depends: debhelper (>= 5.0.38), python (>= 2.5)
+Build-Depends-Indep: python-support
+XS-Python-Version: >= 2.5
+Standards-Version: 3.8.2
+Homepage: http://www.pylint.org
+Vcs-Svn: svn://svn.debian.org/svn/python-apps/packages/pylint/trunk/
+Vcs-Hg: https://bitbucket.org/logilab/pylint
+Vcs-Browser: https://bitbucket.org/logilab/pylint/src
 
 Package: pylint
 Architecture: all
-Depends: python, python-logilab-common (>= 0.22.2), python-logilab-astng (>= 0.17.1)
-Recommends: python-tk
+Depends: ${python:Depends},
+         ${misc:Depends},
+	 python-logilab-common (>= 0.53.0),
+	 python-astroid (>= 1.2)
+Suggests: python-tk
 XB-Python-Version: ${python:Versions}
-Conflicts: python2.2-pylint, python2.3-pylint, python2.4-pylint, pylint-common, pylint-test
-Replaces: python2.2-pylint, python2.3-pylint, python2.4-pylint, pylint-common, pylint-test
-Description: python code static checker
+Description: python code static checker and UML diagram generator
  Pylint is a Python source code analyzer which looks for programming
  errors, helps enforcing a coding standard and sniffs for some code
  smells (as defined in Martin Fowler's Refactoring book)
@@ -29,8 +35,9 @@ Description: python code static checker
  and much more.
  .
  Additionally, it is possible to write plugins to add your own checks.
- . 
+ .
+ The included command pyreverse generates UML class and package
+ diagrams. The included symilar command is a separated similarities checker.
+ .
  The recommended python-tk package is only for using the pylint-gui
  script.
- 
-

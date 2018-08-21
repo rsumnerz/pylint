@@ -1,59 +1,50 @@
-README for PyLint
-=================
+README for Pylint - http://www.pylint.org/
+==========================================
 
-Dependencies
-------------
-Pylint requires the logilab-astng (version >= 0.14), logilab-common
-(version >= 0.13) and the optik (only for python < 2.3) packages. 
-Pylint should be compatible with any python >= 2.2.
+Pylint is a Python source code analyzer which looks for programming errors,
+helps enforcing a coding standard and sniffs for some code smells (as defined in
+Martin Fowler's Refactoring book).
 
-* http://www.logilab.org/projects/astng
-* http://www.logilab.org/projects/common
-* http://optik.sourceforge.net/
+Pylint has many rules enabled by default, way too much to silence them all on a
+minimally sized program. It's highly configurable and handle pragmas to control
+it from within your code. Additionally, it is possible to write plugins to add
+your own checks.
 
+It's a free software distributed under the GNU Public Licence.
+
+Development is hosted on bitbucket: https://bitbucket.org/logilab/pylint/
+
+You can use the code-quality@python.org mailing list to discuss about
+Pylint. Subscribe at https://mail.python.org/mailman/listinfo/code-quality/
+or read the archives at https://mail.python.org/pipermail/code-quality/
 
 Install
 -------
+
+Pylint requires the astroid (the later the better; formerly known as
+logilab-astng) and logilab-common (version >= 0.53) packages.
+
+* https://bitbucket.org/logilab/astroid
+* http://www.logilab.org/projects/common
+
 From the source distribution, extract the tarball and run ::
 
     python setup.py install
 
-You'll have to install dependancies in a similar way. For debian and
-rpm packages, use your usual tools according to your Linux distribution. 
+You'll have to install dependencies in a similar way. For debian and
+rpm packages, use your usual tools according to your Linux distribution.
 
 More information about installation and available distribution format
 may be found in the user manual in the *doc* subdirectory.
 
-
 Documentation
 -------------
-Look in the doc/ subdirectory.
 
+Look in the doc/ subdirectory or at http://docs.pylint.org
 
-Comments, support, bug reports
-------------------------------
-Use the python-projects@logilab.org mailing list. Since we do not have
-publicly available bug tracker yet, bug reports should be emailed
-there too. 
+Pylint is shipped with following additional commands:
 
-You can subscribe to this mailing list at
-http://www.logilab.org/mailinglists/python_projects/mailinglist_register_form
-
-Archives are available at 
-http://lists.logilab.org/pipermail/python-projects/
-
-
-Contributors
-------------
-* Sylvain Thénault: main author / maintainer
-* Alexandre Fayolle: TkInter gui, documentation, debian support
-* Brian van den Broek: windows installation documentation
-* Amaury Forgeot d'Arc: patch to check names imported from a module
-  exists in the module
-* Benjamin Niemann: patch to allow block level enabling/disabling of messages
-* Wolfgang Grafen, Axel Muller, Fabio Zadrozny, Pierre Rouleau,  
-  Maarten ter Huurne, Mirko Friedenhagen (among others): 
-  bug reports, feedback, feature requests...
-* All the Logilab's team: daily use, bug reports, feature requests
-* Other people have contributed by their feedback, if I've forgotten
-  you, send me a note !
+* pyreverse: an UML diagram generator
+* symilar: an independent similarities checker
+* epylint: Emacs and Flymake compatible Pylint
+* pylint-gui: a graphical interface

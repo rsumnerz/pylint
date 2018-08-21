@@ -5,62 +5,67 @@
 # adapted by Logilab for automatic generation by debianize
 # (part of the devtools project, http://www.logilab.org/projects/devtools)
 #
-# Copyright (c) 2003-2005 LOGILAB S.A. (Paris, FRANCE).
+# Copyright (c) 2003-2010 LOGILAB S.A. (Paris, FRANCE).
 # http://www.logilab.fr/ -- mailto:contact@logilab.fr
 
 # Uncomment this to turn on verbose mode.
 #export DH_VERBOSE=1
+
 build: build-stamp
-build-stamp: 
+build-stamp:
 	dh_testdir
-	python setup.py -q build
+	NO_SETUPTOOLS=1 python setup.py -q build
 	touch build-stamp
 
-clean: 
+clean:
 	dh_testdir
 	dh_testroot
-	rm -f build-stamp configure-stamp
+
+	NO_SETUPTOOLS=1 python setup.py clean
+
+	find . -name "*.pyc" -delete
+
 	rm -rf build
-	find . -name "*.pyc" | xargs rm -f
-	rm -f changelog.gz
-	dh_clean
+
+	dh_clean build-stamp
 
 install: build
 	dh_testdir
 	dh_testroot
 	dh_clean -k
 	dh_installdirs
-	python setup.py -q install --no-compile --prefix=debian/pylint/usr/
 
-	rm -rf debian/pylint/usr/lib/python*/site-packages/pylint/test
-	if head -1 debian/pylint/usr/bin/pylint | grep "^#! */usr/bin" | grep "python" >/dev/null ; then \
-		sed -i "s@^#! */usr/bin/env \+python\$$@#!/usr/bin/python@" debian/pylint/usr/bin/pylint; \
-	fi
-	chmod a+x debian/pylint/usr/bin/pylint
-	if head -1 debian/pylint/usr/bin/pylint-gui | grep "^#! */usr/bin" | grep "python" >/dev/null ; then \
-		sed -i "s@^#! */usr/bin/env \+python\$$@#!/usr/bin/python@" debian/pylint/usr/bin/pylint-gui; \
-	fi
-	chmod a+x debian/pylint/usr/bin/pylint-gui
-	if head -1 debian/pylint/usr/bin/symilar | grep "^#! */usr/bin" | grep "python" >/dev/null ; then \
-		sed -i "s@^#! */usr/bin/env \+python\$$@#!/usr/bin/python@" debian/pylint/usr/bin/symilar; \
-	fi
-	chmod a+x debian/pylint/usr/bin/symilar
+	NO_SETUPTOOLS=1 python setup.py -q install --no-compile \
+			--root=$(CURDIR)/debian/pylint \
+			--install-layout=deb
+
+	rm -rf debian/pylint/usr/lib/python*/*-packages/pylint/test
+
+	# fixes shebangs
+	for exec_file in pylint pylint-gui symilar epylint pyreverse ; do \
+	  if head -1 debian/pylint/usr/bin/$$exec_file | grep "^#! */usr/bin" | grep "python" >/dev/null ; then \
+		sed -i "s@^#! */usr/bin/env \+python\$$@#!/usr/bin/python@" debian/pylint/usr/bin/$$exec_file; \
+	  fi ; \
+	  chmod a+x debian/pylint/usr/bin/$$exec_file; \
+	done
+
 	install -m 644 elisp/pylint.el debian/pylint/usr/share/emacs/site-lisp/pylint/
 
 	# install tests
 	#(cd test && find . -type f -not \( -path '*/CVS/*' -or -name '*.pyc' \) -exec install -D --mode=644 {} ../debian/pylint/usr/share/doc/pylint/test/{} \;)
 
+get-orig-source:
+	uscan --verbose --force-download --destdir .
 
 # Build architecture-independent files here.
 binary-indep: build install
 	dh_testdir 
 	dh_testroot 
 	dh_install -i
-	dh_pycentral -i
-	gzip -9 -c ChangeLog > changelog.gz
-	dh_installchangelogs -i
+	dh_pysupport -i
+	dh_installchangelogs -i ChangeLog
 	dh_installexamples -i
-	dh_installdocs -i README TODO changelog.gz debian/NEWS.Debian
+	dh_installdocs -i
 	dh_installman -i
 	dh_installemacsen
 	dh_link -i
@@ -75,4 +80,3 @@ binary-arch:
 
 binary: binary-indep
 .PHONY: build clean binary binary-indep binary-arch
-

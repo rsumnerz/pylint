@@ -1,14 +1,14 @@
-from logilab import astng
+import astroid
 
-from pylint.interfaces import IASTNGChecker
+from pylint.interfaces import IAstroidChecker
 from pylint.checkers import BaseChecker
 
-class MyASTNGChecker(BaseChecker):
+class MyAstroidChecker(BaseChecker):
     """add member attributes defined using my own "properties" function
     to the class locals dictionary
     """
     
-    __implements__ = IASTNGChecker
+    __implements__ = IAstroidChecker
 
     name = 'custom'
     msgs = {}
@@ -17,15 +17,13 @@ class MyASTNGChecker(BaseChecker):
     priority = -1 
 
     def visit_callfunc(self, node):
-        """called when a CallFunc node is encountered. See compiler.ast
-        documentation for a description of available nodes:
-        http://www.python.org/doc/current/lib/module-compiler.ast.html
-        )
-        """
-        if not (isinstance(node.node, astng.Getattr)
-                and isinstance(node.node.expr, astng.Name)
-                and node.node.expr.name == 'properties'
-                and node.node.attrname == 'create'):
+        """called when a CallFunc node is encountered.
+
+        See astroid for the description of available nodes."""
+        if not (isinstance(node.func, astroid.Getattr)
+                and isinstance(node.func.expr, astroid.Name)
+                and node.func.expr.name == 'properties'
+                and node.func.attrname == 'create'):
             return
         in_class = node.frame()
         for param in node.args:
@@ -34,5 +32,5 @@ class MyASTNGChecker(BaseChecker):
     
 def register(linter):
     """required method to auto register this checker"""
-    linter.register_checker(MyASTNGChecker(linter))
+    linter.register_checker(MyAstroidChecker(linter))
         

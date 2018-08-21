@@ -1,47 +1,47 @@
-# pylint: disable-msg=C0302
-"""pylint option block-disable-msg"""
+# pylint: disable=C0302,bare-except
+"""pylint option block-disable"""
 __revision__ = None
 
 class Foo(object):
-    """block-disable-msg test"""
-    
+    """block-disable test"""
+
     def __init__(self):
         pass
 
     def meth1(self, arg):
         """this issues a message"""
         print self
-    
+
     def meth2(self, arg):
         """and this one not"""
-        # pylint: disable-msg=W0613
+        # pylint: disable=W0613
         print self\
               + "foo"
 
     def meth3(self):
         """test one line disabling"""
         # no error
-        print self.bla # pylint: disable-msg=E1101
+        print self.bla # pylint: disable=E1101
         # error
-        print self.blop 
+        print self.blop
 
     def meth4(self):
         """test re-enabling"""
-        # pylint: disable-msg=E1101
+        # pylint: disable=E1101
         # no error
         print self.bla
-        print self.blop 
-        # pylint: enable-msg=E1101
+        print self.blop
+        # pylint: enable=E1101
         # error
         print self.blip
 
     def meth5(self):
         """test IF sub-block re-enabling"""
-        # pylint: disable-msg=E1101
+        # pylint: disable=E1101
         # no error
         print self.bla
         if self.blop:
-            # pylint: enable-msg=E1101
+            # pylint: enable=E1101
             # error
             print self.blip
         else:
@@ -52,14 +52,14 @@ class Foo(object):
 
     def meth6(self):
         """test TRY/EXCEPT sub-block re-enabling"""
-        # pylint: disable-msg=E1101
+        # pylint: disable=E1101
         # no error
         print self.bla
         try:
-            # pylint: enable-msg=E1101
+            # pylint: enable=E1101
             # error
             print self.blip
-        except UndefinedName: # pylint: disable-msg=E0602
+        except UndefinedName: # pylint: disable=E0602
             # no error
             print self.blip
         # no error
@@ -67,7 +67,7 @@ class Foo(object):
 
     def meth7(self):
         """test one line block opening disabling"""
-        if self.blop: # pylint: disable-msg=E1101
+        if self.blop: # pylint: disable=E1101
             # error
             print self.blip
         else:
@@ -81,31 +81,40 @@ class Foo(object):
         """test late disabling"""
         # error
         print self.blip
-        # pylint: disable-msg=E1101
+        # pylint: disable=E1101
         # no error
         print self.bla
-        print self.blop 
+        print self.blop
 
     def meth9(self):
         """test re-enabling right after a block with whitespace"""
         eris = 5
 
         if eris:
-            print ("In block")
+            print "In block"
 
-        # pylint: disable-msg=E1101
+        # pylint: disable=E1101
         # no error
         print self.bla
         print self.blu
-        # pylint: enable-msg=E1101
+        # pylint: enable=E1101
         # error
         print self.blip
 
+    def meth10(self):
+        """Test double disable"""
+        # pylint: disable=E1101
+        # no error
+        print self.bla
+        # pylint: disable=E1101
+        print self.blu
+
+
 class ClassLevelMessage(object):
-    """should'nt display to much attributes/not enough methods messages
+    """shouldn't display to much attributes/not enough methods messages
     """
-    # pylint: disable-msg=R0902,R0903
-    
+    # pylint: disable=R0902,R0903
+
     def __init__(self):
         self.attr1 = 1
         self.attr2 = 1
@@ -119,9 +128,9 @@ class ClassLevelMessage(object):
         self.attr0 = 1
 
     def too_complex_but_thats_ok(self, attr1, attr2):
-        """THIS Method has too much branchs and returns but i don't care
+        """THIS Method has too much branches and returns but i don't care
         """
-        # pylint: disable-msg=R0912,R0911
+        # pylint: disable=R0912,R0911
         try:
             attr3 = attr1+attr2
         except ValueError:

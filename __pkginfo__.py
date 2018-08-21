@@ -1,5 +1,5 @@
-# pylint: disable-msg=W0622,C0103
-# Copyright (c) 2003-2008 LOGILAB S.A. (Paris, FRANCE).
+# pylint: disable=W0622,C0103
+# Copyright (c) 2003-2014 LOGILAB S.A. (Paris, FRANCE).
 # http://www.logilab.fr/ -- mailto:contact@logilab.fr
 #
 # This program is free software; you can redistribute it and/or modify it under
@@ -13,20 +13,42 @@
 #
 # You should have received a copy of the GNU General Public License along with
 # this program; if not, write to the Free Software Foundation, Inc.,
-# 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
+# 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 """pylint packaging information"""
+import sys
 
-modname = 'pylint'
+modname = distname = 'pylint'
 
-numversion = (0, 14, 0)
+numversion = (1, 3, 0)
 version = '.'.join([str(num) for num in numversion])
 
-license = 'GPL'
-copyright = '''Copyright (c) 2003-2008 Sylvain Thenault (thenault@gmail.com).
-Copyright (c) 2003-2008 LOGILAB S.A. (Paris, FRANCE).
-http://www.logilab.fr/ -- mailto:contact@logilab.fr'''
+if sys.version_info < (2, 6):
+    install_requires = ['logilab-common >= 0.53.0', 'astroid >= 1.2',
+                        'StringFormat']
+else:
+    install_requires = ['logilab-common >= 0.53.0', 'astroid >= 1.2']
 
-short_desc = "python code static checker"
+license = 'GPL'
+description = "python code static checker"
+web = 'http://www.pylint.org'
+mailinglist = "mailto://code-quality@python.org"
+author = 'Logilab'
+author_email = 'python-projects@lists.logilab.org'
+
+classifiers = ['Development Status :: 4 - Beta',
+               'Environment :: Console',
+               'Intended Audience :: Developers',
+               'License :: OSI Approved :: GNU General Public License (GPL)',
+               'Operating System :: OS Independent',
+               'Programming Language :: Python',
+               'Programming Language :: Python :: 2',
+               'Programming Language :: Python :: 3',
+               'Topic :: Software Development :: Debuggers',
+               'Topic :: Software Development :: Quality Assurance',
+               'Topic :: Software Development :: Testing'
+              ]
+
+
 long_desc = """\
  Pylint is a Python source code analyzer which looks for programming
  errors, helps enforcing a coding standard and sniffs for some code
@@ -39,35 +61,14 @@ long_desc = """\
  standard, or checking if declared interfaces are truly implemented,
  and much more.
  .
- Additionally, it is possible to write plugins to add your own checks."""
-
-author = "Sylvain Thenault"
-author_email = "sylvain.thenault@logilab.fr"
-
-web = "http://www.logilab.org/project/name/%s" % modname
-ftp = "ftp://ftp.logilab.org/pub/%s" % modname
-mailinglist = "mailto://python-projects@logilab.org"
+ Additionally, it is possible to write plugins to add your own checks.
+ .
+ Pylint is shipped with "pylint-gui", "pyreverse" (UML diagram generator)
+ and "symilar" (an independent similarities checker)."""
 
 from os.path import join
 scripts = [join('bin', filename)
-           for filename in ('pylint', 'pylint-gui', "symilar", "epylint")]
+           for filename in ('pylint', 'pylint-gui', "symilar", "epylint",
+                            "pyreverse")]
 
-include_dirs = [join('test', 'input'),
-                join('test', 'messages'),
-                join('test', 'rpythonmessages'),
-                join('test', 'regrtest_data')]
-
-pyversions = ["2.3", "2.4", "2.5"]
-
-debian_uploader = 'Alexandre Fayolle <afayolle@debian.org>'
-
-classifiers =  ['Development Status :: 4 - Beta',
-                'Environment :: Console',
-                'Intended Audience :: Developers',
-                'License :: OSI Approved :: GNU General Public License (GPL)',
-                'Operating System :: OS Independent',
-                'Programming Language :: Python',
-                'Topic :: Software Development :: Debuggers',
-                'Topic :: Software Development :: Quality Assurance',
-                'Topic :: Software Development :: Testing',
-                ]
+include_dirs = ['test']
