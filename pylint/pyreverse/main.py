@@ -1,13 +1,18 @@
-# Copyright (c) 2008-2010, 2012-2014 LOGILAB S.A. (Paris, FRANCE) <contact@logilab.fr>
-# Copyright (c) 2014 Brett Cannon <brett@python.org>
-# Copyright (c) 2014 Arun Persaud <arun@nubati.net>
-# Copyright (c) 2015-2018 Claudiu Popa <pcmanticore@gmail.com>
-# Copyright (c) 2015 Ionel Cristian Maries <contact@ionelmc.ro>
-# Copyright (c) 2016 Alexander Pervakov <frost.nzcr4@jagmort.com>
-
-# Licensed under the GPL: https://www.gnu.org/licenses/old-licenses/gpl-2.0.html
-# For details: https://github.com/PyCQA/pylint/blob/master/COPYING
-
+# # Copyright (c) 2000-2013 LOGILAB S.A. (Paris, FRANCE).
+# http://www.logilab.fr/ -- mailto:contact@logilab.fr
+#
+# This program is free software; you can redistribute it and/or modify it under
+# the terms of the GNU General Public License as published by the Free Software
+# Foundation; either version 2 of the License, or (at your option) any later
+# version.
+#
+# This program is distributed in the hope that it will be useful, but WITHOUT
+# ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
+# FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License along with
+# this program; if not, write to the Free Software Foundation, Inc.,
+# 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 """
   %prog [options] <packages>
 
@@ -15,12 +20,11 @@
 """
 from __future__ import print_function
 
-import os
-import subprocess
-import sys
+import sys, os
+from logilab.common.configuration import ConfigurationMixIn
+from astroid.manager import AstroidManager
+from astroid.inspector import Linker
 
-from pylint.config import ConfigurationMixIn
-from pylint.pyreverse.inspector import Linker, project_from_files
 from pylint.pyreverse.diadefslib import DiadefsHandler
 from pylint.pyreverse import writer
 from pylint.pyreverse.utils import insert_default_options
@@ -51,8 +55,8 @@ OPTIONS = (
      dict(short="A", default=None,
           help="show all ancestors off all classes in <projects>")),
     ("show-associated",
-     dict(short='s', action="store", metavar='<association_level>', type='int',
-          help='show <association_level> levels of associated classes not in <projects>')),
+     dict(short='s', action="store", metavar='<ass_level>', type='int',
+          help='show <ass_level> levels of associated classes not in <projects>')),
     ("all-associated",
      dict(short='S', default=None,
           help='show recursively all associated off all associated classes')),
@@ -75,27 +79,10 @@ this disables -f values")),
     ("output", dict(short="o", dest="output_format", action="store",
                     default="dot", metavar="<format>",
                     help="create a *.<format> output file if format available.")),
-    ("ignore", {'type' : "csv", 'metavar' : "<file[,file...]>",
-                'dest' : "black_list", "default" : ('CVS',),
-                'help' : "Add files or directories to the blacklist. They "
-                         "should be base names, not paths."}),
-    ("project", {'default': "", 'type' : 'string', 'short': 'p',
-                 'metavar': '<project name>', 'help': 'set the project name.'}),
 )
-
-
-def _check_graphviz_available(output_format):
-    """check if we need graphviz for different output format"""
-    try:
-        subprocess.call(['dot', '-V'], stdout=subprocess.PIPE,
-                        stderr=subprocess.PIPE)
-    except OSError:
-        print("The output format '%s' is currently not available.\n"
-              "Please install 'Graphviz' to have other output formats "
-              "than 'dot' or 'vcg'." % output_format)
-        sys.exit(32)
-
-
+# FIXME : quiet mode
+#( ('quiet',
+                #dict(help='run quietly', action='store_true', short='q')), )
 
 class Run(ConfigurationMixIn):
     """base class providing common behaviour for pyreverse commands"""
@@ -105,10 +92,9 @@ class Run(ConfigurationMixIn):
     def __init__(self, args):
         ConfigurationMixIn.__init__(self, usage=__doc__)
         insert_default_options()
+        self.manager = AstroidManager()
+        self.register_options_provider(self.manager)
         args = self.load_command_line_configuration()
-        if self.config.output_format not in ('dot', 'vcg'):
-            _check_graphviz_available(self.config.output_format)
-
         sys.exit(self.run(args))
 
     def run(self, args):
@@ -120,8 +106,7 @@ class Run(ConfigurationMixIn):
         # dependencies to local modules even if cwd is not in the PYTHONPATH
         sys.path.insert(0, os.getcwd())
         try:
-            project = project_from_files(args, project_name=self.config.project,
-                                         black_list=self.config.black_list)
+            project = self.manager.project_from_files(args)
             linker = Linker(project, tag=True)
             handler = DiadefsHandler(self.config)
             diadefs = handler.get_diadefs(project, linker)

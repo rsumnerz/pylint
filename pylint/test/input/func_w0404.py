@@ -1,5 +1,6 @@
 """Unittests for W0404 (reimport)"""
 from __future__ import absolute_import, print_function
+__revision__ = 0
 
 import sys
 
@@ -9,8 +10,7 @@ from xml.etree import ElementTree
 from email import encoders
 import email.encoders
 
-import sys  #pylint: disable=ungrouped-imports,wrong-import-order
-__revision__ = 0
+import sys
 
 def no_reimport():
     """docstring"""

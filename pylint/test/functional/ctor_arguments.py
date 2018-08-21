@@ -2,7 +2,7 @@
 
 Based on test/functional/arguments.py
 """
-# pylint: disable=C0111,R0903,W0231, useless-object-inheritance
+# pylint: disable=C0111,R0903,W0231
 
 
 class Class1Arg(object):
@@ -65,8 +65,8 @@ ClassNew(one=2)  # [no-value-for-parameter,unexpected-keyword-arg]
 
 
 class Metaclass(type):
-    def __new__(cls, name, bases, namespace):
-        return type.__new__(cls, name, bases, namespace)
+    def __new__(mcs, name, bases, namespace):
+        return type.__new__(mcs, name, bases, namespace)
 
 def with_metaclass(meta, base=object):
     """Create a new type that can be used as a metaclass."""
@@ -76,29 +76,3 @@ class ClassWithMeta(with_metaclass(Metaclass)):
     pass
 
 ClassWithMeta()
-
-
-class BuiltinExc(Exception):
-    def __init__(self, val=True):
-        self.val = val
-
-BuiltinExc(42, 24, badarg=1) # [too-many-function-args,unexpected-keyword-arg]
-
-
-class Clsmethod(object):
-    def __init__(self, first, second):
-        self.first = first
-        self.second = second
-
-    @classmethod
-    def from_nothing(cls):
-        return cls(1, 2, 3, 4) # [too-many-function-args]
-
-    @classmethod
-    def from_nothing1(cls):
-        return cls() # [no-value-for-parameter,no-value-for-parameter]
-
-    @classmethod
-    def from_nothing2(cls):
-        # +1: [no-value-for-parameter,unexpected-keyword-arg]
-        return cls(1, not_argument=2)

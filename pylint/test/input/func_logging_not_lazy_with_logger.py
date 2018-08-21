@@ -1,8 +1,9 @@
 """Logging warnings using a logger class."""
 from __future__ import absolute_import
+__revision__ = ''
+
 import logging
 
-__revision__ = ''
 
 LOG = logging.getLogger("domain")
 LOG.debug("%s" % "junk")

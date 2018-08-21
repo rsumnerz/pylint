@@ -7,5 +7,5 @@ def new_style():
     except IOError, (errno, message):  # [unpacking-in-except]
         print errno, message  # pylint: disable=print-statement
     # +1: [redefine-in-handler,redefine-in-handler,unpacking-in-except]
-    except IOError, (new_style, tuple):  # pylint: disable=duplicate-except
+    except IOError, (new_style, tuple):
         print new_style, tuple  # pylint: disable=print-statement

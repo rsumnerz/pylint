@@ -1,4 +1,4 @@
-# pylint: disable=R0903,W0232, useless-object-inheritance
+# pylint: disable=R0903,W0232
 """check for scope problems"""
 
 __revision__ = None
@@ -14,7 +14,7 @@ class Well(object):
 
     class Data(object):
         """base hidden class"""
-    class Sub(Data):
+    class Sub(Data): # [undefined-variable
         """whaou, is Data found???"""
         attr = Data() # [undefined-variable]
     def func(self):

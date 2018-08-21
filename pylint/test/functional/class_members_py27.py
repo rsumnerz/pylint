@@ -1,6 +1,6 @@
 """ Various tests for class members access. """
-# pylint: disable=R0903,print-statement,no-absolute-import, metaclass-assignment,import-error,no-init,missing-docstring, wrong-import-order,wrong-import-position, useless-object-inheritance
-from missing import Missing
+# pylint: disable=R0903,print-statement,no-absolute-import, metaclass-assignment
+
 class MyClass(object):
     """class docstring"""
 
@@ -38,7 +38,7 @@ class TestMetaclass(object):
 class Metaclass(type):
     """ metaclass """
     @classmethod
-    def test(cls):
+    def test(mcs):
         """ classmethod """
 
 class UsingMetaclass(object):
@@ -49,22 +49,3 @@ TestMetaclass.register(int)
 UsingMetaclass.test()
 TestMetaclass().register(int) # [no-member]
 UsingMetaclass().test() # [no-member]
-
-
-class NoKnownBases(Missing):
-    """Don't emit no-member if we don't know the bases of a class."""
-
-NoKnownBases().lalala()
-
-
-class MetaClass(object):
-    """Look some methods in the implicit metaclass."""
-
-    @classmethod
-    def whatever(cls):
-        return cls.mro() + cls.missing() # [no-member]
-
-from collections import namedtuple
-
-Tuple = namedtuple("Tuple", "field other")
-Tuple.field.__doc__ = "A doc for the field."

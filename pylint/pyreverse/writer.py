@@ -1,28 +1,32 @@
 # -*- coding: utf-8 -*-
-# Copyright (c) 2008-2010, 2013-2014 LOGILAB S.A. (Paris, FRANCE) <contact@logilab.fr>
-# Copyright (c) 2014 Arun Persaud <arun@nubati.net>
-# Copyright (c) 2015-2017 Claudiu Popa <pcmanticore@gmail.com>
-# Copyright (c) 2015 Mike Frysinger <vapier@gentoo.org>
-# Copyright (c) 2015 Florian Bruhin <me@the-compiler.org>
-# Copyright (c) 2015 Ionel Cristian Maries <contact@ionelmc.ro>
-# Copyright (c) 2018 ssolanki <sushobhitsolanki@gmail.com>
-# Copyright (c) 2018 Anthony Sottile <asottile@umich.edu>
-
-# Licensed under the GPL: https://www.gnu.org/licenses/old-licenses/gpl-2.0.html
-# For details: https://github.com/PyCQA/pylint/blob/master/COPYING
-
+# Copyright (c) 2008-2013 LOGILAB S.A. (Paris, FRANCE).
+# http://www.logilab.fr/ -- mailto:contact@logilab.fr
+#
+# This program is free software; you can redistribute it and/or modify it under
+# the terms of the GNU General Public License as published by the Free Software
+# Foundation; either version 2 of the License, or (at your option) any later
+# version.
+#
+# This program is distributed in the hope that it will be useful, but WITHOUT
+# ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
+# FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License along with
+# this program; if not, write to the Free Software Foundation, Inc.,
+# 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 """Utilities for creating VCG and Dot diagrams"""
 
-from pylint.pyreverse.utils import is_exception
-from pylint.pyreverse.vcgutils import VCGPrinter
-from pylint.graph import DotBackend
+from logilab.common.vcgutils import VCGPrinter
+from logilab.common.graph import DotBackend
 
-class DiagramWriter:
+from pylint.pyreverse.utils import is_exception
+
+class DiagramWriter(object):
     """base class for writing project diagrams
     """
     def __init__(self, config, styles):
         self.config = config
-        self.pkg_edges, self.inh_edges, self.imp_edges, self.association_edges = styles
+        self.pkg_edges, self.inh_edges, self.imp_edges, self.ass_edges = styles
         self.printer = None # defined in set_printer
 
     def write(self, diadefs):
@@ -66,7 +70,7 @@ class DiagramWriter:
         # generate associations
         for rel in diagram.get_relationships('association'):
             self.printer.emit_edge(rel.from_object.fig_id, rel.to_object.fig_id,
-                                   label=rel.name, **self.association_edges)
+                                   label=rel.name, **self.ass_edges)
 
     def set_printer(self, file_name, basename):
         """set printer"""
@@ -102,7 +106,7 @@ class DotWriter(DiagramWriter):
         """initialize DotWriter and add options for layout.
         """
         layout = dict(rankdir="BT")
-        self.printer = DotBackend(basename, additional_param=layout)
+        self.printer = DotBackend(basename, additionnal_param=layout)
         self.file_name = file_name
 
     def get_title(self, obj):
@@ -116,7 +120,7 @@ class DotWriter(DiagramWriter):
         """
         label = obj.title
         if obj.shape == 'interface':
-            label = '«interface»\\n%s' % label
+            label = u'«interface»\\n%s' % label
         if not self.config.only_classnames:
             label = r'%s|%s\l|' % (label, r'\l'.join(obj.attrs))
             for func in obj.methods:
@@ -192,3 +196,4 @@ class VCGWriter(DiagramWriter):
         """close graph and file"""
         self.printer.close_graph()
         self.graph_file.close()
+

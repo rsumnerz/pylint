@@ -1,5 +1,5 @@
 """ Tests for invalid-name checker. """
-# pylint: disable=unused-import, no-absolute-import, wrong-import-position
+# pylint: disable=unused-import, no-absolute-import
 
 AAA = 24
 try:
@@ -26,14 +26,3 @@ def test():
     except ImportError:
         re = None
     return re
-
-def a(): # [invalid-name]
-    """yo"""
-
-
-def _generate_cmdline_tests():
-    TestCase = collections.namedtuple('TestCase', 'cmd, valid')
-    valid = ['leave-mode', 'hint all']
-    # Valid command only -> valid
-    for item in valid:
-        yield TestCase(''.join(item), True)

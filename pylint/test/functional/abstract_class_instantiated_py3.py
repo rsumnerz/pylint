@@ -4,12 +4,13 @@ abstract methods.
 """
 
 # pylint: disable=too-few-public-methods, missing-docstring
-# pylint: disable=abstract-method, import-error, useless-object-inheritance
+# pylint: disable=abstract-class-not-used, abstract-class-little-used
+# pylint: disable=abstract-method
+
+__revision__ = 0
 
 import abc
 import weakref
-from lala import Bala
-
 
 class GoodClass(object, metaclass=abc.ABCMeta):
     pass
@@ -46,14 +47,14 @@ class Structure(object, metaclass=abc.ABCMeta):
     def __len__(self):
         pass
     @abc.abstractmethod
-    def __contains__(self, _):
+    def __contains__(self):
         pass
     @abc.abstractmethod
     def __hash__(self):
         pass
 
 class Container(Structure):
-    def __contains__(self, _):
+    def __contains__(self):
         pass
 
 class Sizable(Structure):
@@ -82,25 +83,11 @@ class NoMroAbstractMethods(Container, Iterator, Sizable, Hashable):
 class BadMroAbstractMethods(Container, Iterator, AbstractSizable):
     pass
 
-class SomeMetaclass(metaclass=abc.ABCMeta):
-
-    @abc.abstractmethod
-    def prop(self):
-        pass
-
-class FourthGoodClass(SomeMetaclass):
-    """Don't consider this abstract if some attributes are
-    there, but can't be inferred.
-    """
-    prop = Bala # missing
-
-
 def main():
     """ do nothing """
     GoodClass()
     SecondGoodClass()
     ThirdGoodClass()
-    FourthGoodClass()
     weakref.WeakKeyDictionary()
     weakref.WeakValueDictionary()
     NoMroAbstractMethods()
@@ -109,20 +96,3 @@ def main():
     BadClass() # [abstract-class-instantiated]
     SecondBadClass() # [abstract-class-instantiated]
     ThirdBadClass() # [abstract-class-instantiated]
-
-
-if 1: # pylint: disable=using-constant-test
-    class FourthBadClass(object, metaclass=abc.ABCMeta):
-
-        def test(self):
-            pass
-else:
-    class FourthBadClass(object, metaclass=abc.ABCMeta):
-
-        @abc.abstractmethod
-        def test(self):
-            pass
-
-
-def main2():
-    FourthBadClass() # [abstract-class-instantiated]

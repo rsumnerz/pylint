@@ -1,4 +1,4 @@
-# pylint: disable=too-few-public-methods,no-self-use, no-absolute-import,import-error, useless-object-inheritance, unnecessary-pass
+# pylint: disable=too-few-public-methods,no-self-use, no-absolute-import
 """Test Pylint's use of __all__.
 
 * NonExistant is not defined in this module, and it is listed in
@@ -8,15 +8,12 @@
   are expected.
 """
 from __future__ import print_function
+
 from os import path
 from collections import deque
-from missing import Missing
 
 __all__ = [
     'Dummy',
-    '', # [undefined-all-variable]
-    Missing,
-    SomeUndefined, # [undefined-variable]
     'NonExistant',  # [undefined-all-variable]
     'path',
     'func',  # [undefined-all-variable]
@@ -45,5 +42,5 @@ class Klass(object):
         print(inner)
 
     class InnerKlass(object):
-        """An inner klass"""
+        """A inner klass"""
         pass

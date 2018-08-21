@@ -1,6 +1,6 @@
 """test for Python 3 string formatting error
 """
-# pylint: disable=too-few-public-methods, import-error, unused-argument, line-too-long, no-absolute-import, useless-object-inheritance
+# pylint: disable=too-few-public-methods, import-error, unused-argument, star-args, line-too-long, no-absolute-import
 import os
 from missing import Missing
 
@@ -8,7 +8,7 @@ __revision__ = 1
 
 class Custom(object):
     """ Has a __getattr__ """
-    def __getattr__(self, _):
+    def __getattr__(self):
         return self
 
 class Test(object):
@@ -181,8 +181,3 @@ def issue_463():
     data2 = "{0[0]}: {0}".format([1])
     return (data, data2)
 
-
-def avoid_empty_attribute():
-    """The following string is invalid, avoid crashing."""
-
-    return "There are {.:2f} undiscovered errors.".format(1) # [bad-format-string]

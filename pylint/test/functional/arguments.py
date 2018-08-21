@@ -1,5 +1,5 @@
-# pylint: disable=too-few-public-methods, no-absolute-import,missing-docstring,import-error,wrong-import-position
-# pylint: disable=wrong-import-order, useless-object-inheritance
+# pylint: disable=too-few-public-methods, no-absolute-import
+"""Test function argument checker"""
 
 def decorator(fun):
     """Decorator"""
@@ -66,7 +66,7 @@ LAMBDA = lambda arg: 1
 LAMBDA()  # [no-value-for-parameter]
 
 def method_tests():
-    """Method invocations."""
+    """"Method invocations."""
     demo = DemoClass()
     demo.static_method()  # [no-value-for-parameter]
     DemoClass.static_method()  # [no-value-for-parameter]
@@ -96,122 +96,3 @@ class Text(object):
             return object.__new__(cls)
 
 Text()
-
-class TestStaticMethod(object):
-
-    @staticmethod
-    def test(first, second=None, **kwargs):
-        return first, second, kwargs
-
-    def func(self):
-        self.test(42)
-        self.test(42, second=34)
-        self.test(42, 42)
-        self.test() # [no-value-for-parameter]
-        self.test(42, 42, 42) # [too-many-function-args]
-
-
-class TypeCheckConstructor(object):
-    def __init__(self, first, second):
-        self.first = first
-        self.second = second
-    def test(self):
-        type(self)(1, 2, 3) # [too-many-function-args]
-        # +1: [no-value-for-parameter,no-value-for-parameter]
-        type(self)()
-        type(self)(1, lala=2) # [no-value-for-parameter,unexpected-keyword-arg]
-        type(self)(1, 2)
-        type(self)(first=1, second=2)
-
-
-class Test(object):
-    """ lambda needs Test instance as first argument """
-    lam = lambda self, icon: (self, icon)
-
-    def test(self):
-        self.lam(42)
-        self.lam() # [no-value-for-parameter]
-        self.lam(1, 2, 3) # [too-many-function-args]
-
-Test().lam() # [no-value-for-parameter]
-
-# Don't emit a redundant-keyword-arg for this example,
-# it's perfectly valid
-
-class Issue642(object):
-    attr = 0
-    def __str__(self):
-        return "{self.attr}".format(self=self)
-
-# These should not emit anything regarding the number of arguments,
-# since they have something invalid.
-from ala_bala_portocola import unknown
-
-# pylint: disable=not-a-mapping,not-an-iterable
-
-function_1_arg(*unknown)
-function_1_arg(1, *2)
-function_1_arg(1, 2, 3, **unknown)
-function_1_arg(4, 5, **1)
-function_1_arg(5, 6, **{unknown: 1})
-function_1_arg(**{object: 1})
-function_1_arg(**{1: 2})
-
-def no_context_but_redefined(*args):
-    args = [1]
-    #+1: [no-value-for-parameter, no-value-for-parameter]
-    expect_three(*list(args))
-
-def no_context_one_elem(*args):
-    expect_three(args) # [no-value-for-parameter, no-value-for-parameter]
-
-# Don't emit no-value-for-parameter for this, since we
-# don't have the context at our disposal.
-def expect_three(one, two, three):
-    return one + two + three
-
-
-def no_context(*args):
-    expect_three(*args)
-
-def no_context_two(*args):
-    expect_three(*list(args))
-
-def no_context_three(*args):
-    expect_three(*set(args))
-
-def compare_prices(arg):
-    return set((arg, ))
-
-def find_problems2(prob_dates):
-    for fff in range(10):
-        prob_dates |= compare_prices(fff)
-
-
-from collections import namedtuple
-
-
-def namedtuple_replace_issue_1036():
-    cls = namedtuple('cls', 'a b c')
-    new_instance = cls(1, 2, 3)._replace(
-        a=24,
-        b=24,
-        c=42
-    )
-    # +1:[unexpected-keyword-arg,unexpected-keyword-arg]
-    new_bad_instance = cls(1, 2, 3)._replace(d=24, e=32)
-    return new_instance, new_bad_instance
-
-
-from functools import partial
-
-def some_func(first, second, third):
-    return first + second + third
-
-
-partial(some_func, 1, 2)(3)
-partial(some_func, third=1, second=2)(3)
-partial(some_func, 1, third=2)(second=3)
-partial(some_func, 1)(1)  # [no-value-for-parameter]
-partial(some_func, 1)(third=1)  # [no-value-for-parameter]
-partial(some_func, 1, 2)(third=1, fourth=4)  # [unexpected-keyword-arg]

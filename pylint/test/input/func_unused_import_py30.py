@@ -1,6 +1,6 @@
 """check unused import for metaclasses
 """
-# pylint: disable=too-few-public-methods,wrong-import-position,ungrouped-imports
+# pylint: disable=too-few-public-methods
 __revision__ = 1
 import abc
 import sys
@@ -18,3 +18,4 @@ class Meta2(metaclass=ABCMeta):
 
 class Meta3(metaclass=SomethingElse):
     """ test """
+

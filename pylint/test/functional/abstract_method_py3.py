@@ -2,7 +2,8 @@
 from __future__ import print_function
 
 # pylint: disable=missing-docstring, no-init, no-self-use
-# pylint: disable=too-few-public-methods, useless-object-inheritance
+# pylint: disable=too-few-public-methods
+# pylint: disable=abstract-class-little-used, abstract-class-not-used
 import abc
 
 class Abstract(object):
@@ -25,7 +26,7 @@ class AbstractB(Abstract):
         """should be overridden in concrete class"""
         raise NotImplementedError()
 
-class Concrete(Abstract): # [abstract-method]
+class Concret(Abstract): # [abstract-method]
     """Concrete class"""
 
     def aaaa(self):
@@ -40,7 +41,7 @@ class Structure(object, metaclass=abc.ABCMeta):
     def __len__(self):
         pass
     @abc.abstractmethod
-    def __contains__(self, _):
+    def __contains__(self):
         pass
     @abc.abstractmethod
     def __hash__(self):
@@ -49,7 +50,7 @@ class Structure(object, metaclass=abc.ABCMeta):
 
 # +1: [abstract-method, abstract-method, abstract-method]
 class Container(Structure):
-    def __contains__(self, _):
+    def __contains__(self):
         pass
 
 

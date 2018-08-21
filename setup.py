@@ -1,23 +1,23 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 # pylint: disable=W0404,W0622,W0704,W0613
-# Copyright (c) 2006, 2009-2010, 2012-2014 LOGILAB S.A. (Paris, FRANCE) <contact@logilab.fr>
-# Copyright (c) 2010 Julien Jehannet <julien.jehannet@logilab.fr>
-# Copyright (c) 2012 FELD Boris <lothiraldan@gmail.com>
-# Copyright (c) 2013 Benedikt Morbach <benedikt.morbach@googlemail.com>
-# Copyright (c) 2013 T.Rzepka <Tobias.Rzepka@gmail.com>
-# Copyright (c) 2014-2018 Claudiu Popa <pcmanticore@gmail.com>
-# Copyright (c) 2014 Pedro Algarvio <pedro@algarvio.me>
-# Copyright (c) 2014 Brett Cannon <brett@python.org>
-# Copyright (c) 2014 Google, Inc.
-# Copyright (c) 2014 Ricardo Gemignani <ricardo.gemignani@gmail.com>
-# Copyright (c) 2015 Ionel Cristian Maries <contact@ionelmc.ro>
-# Copyright (c) 2016 Florian Bruhin <me@the-compiler.org>
-# Copyright (c) 2017 Hugo <hugovk@users.noreply.github.com>
-
-# Licensed under the GPL: https://www.gnu.org/licenses/old-licenses/gpl-2.0.html
-# For details: https://github.com/PyCQA/pylint/blob/master/COPYING
-
+# copyright 2003-2013 LOGILAB S.A. (Paris, FRANCE), all rights reserved.
+# contact http://www.logilab.fr/ -- mailto:contact@logilab.fr
+#
+# This file is part of pylint.
+#
+# pylint is free software: you can redistribute it and/or modify it under
+# the terms of the GNU Lesser General Public License as published by the Free
+# Software Foundation, either version 2.1 of the License, or (at your option) any
+# later version.
+#
+# pylint is distributed in the hope that it will be useful, but WITHOUT
+# ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
+# FOR A PARTICULAR PURPOSE.  See the GNU Lesser General Public License for more
+# details.
+#
+# You should have received a copy of the GNU Lesser General Public License along
+# with pylint.  If not, see <http://www.gnu.org/licenses/>.
 """Generic Setup script, takes package info from __pkginfo__.py file.
 """
 from __future__ import absolute_import, print_function
@@ -29,6 +29,8 @@ import shutil
 from os.path import isdir, exists, join
 
 try:
+    if os.environ.get('NO_SETUPTOOLS'):
+        raise ImportError()
     from setuptools import setup
     from setuptools.command import easy_install as easy_install_lib
     from setuptools.command import install_lib
@@ -55,9 +57,8 @@ include_dirs = __pkginfo__.get('include_dirs', [])
 ext_modules = __pkginfo__.get('ext_modules', None)
 install_requires = __pkginfo__.get('install_requires', None)
 dependency_links = __pkginfo__.get('dependency_links', [])
-extras_require = __pkginfo__.get('extras_require', {})
 
-readme_path = join(base_dir, 'README.rst')
+readme_path = join(base_dir, 'README')
 if exists(readme_path):
     with open(readme_path) as stream:
         long_description = stream.read()
@@ -107,12 +108,19 @@ class MyInstallLib(install_lib.install_lib):
             for directory in include_dirs:
                 dest = join(self.install_dir, directory)
                 if sys.version_info >= (3, 0):
-                    exclude = {'invalid_encoded_data*', 'unknown_encoding*'}
+                    exclude = set(['invalid_encoded_data*',
+                                   'unknown_encoding*'])
                 else:
                     exclude = set()
                 shutil.rmtree(dest, ignore_errors=True)
                 shutil.copytree(directory, dest,
                                 ignore=shutil.ignore_patterns(*exclude))
+                if sys.version_info >= (3, 0):
+                    # process manually python file in include_dirs (test data)
+                    # pylint: disable=no-name-in-module
+                    from distutils.util import run_2to3
+                    print(('running 2to3 on', dest))
+                    run_2to3([dest])
 
     # override this since pip/easy_install attempt to byte compile test data
     # files, some of them being syntactically wrong by design, and this scares
@@ -137,6 +145,9 @@ def install(**kwargs):
     if USE_SETUPTOOLS:
         if '--force-manifest' in sys.argv:
             sys.argv.remove('--force-manifest')
+    # install-layout option was introduced in 2.5.3-1~exp1
+    elif sys.version_info < (2, 5, 4) and '--install-layout=deb' in sys.argv:
+        sys.argv.remove('--install-layout=deb')
     packages = [modname] + get_packages(join(base_dir, 'pylint'), modname)
     if USE_SETUPTOOLS:
         if install_requires:
@@ -144,6 +155,7 @@ def install(**kwargs):
             kwargs['dependency_links'] = dependency_links
         kwargs['entry_points'] = {'console_scripts': [
             'pylint = pylint:run_pylint',
+            'pylint-gui = pylint:run_pylint_gui',
             'epylint = pylint:run_epylint',
             'pyreverse = pylint:run_pyreverse',
             'symilar = pylint:run_symilar',
@@ -155,7 +167,7 @@ def install(**kwargs):
         cmdclass['easy_install'] = easy_install
     return setup(name=distname,
                  version=__pkginfo__['version'],
-                 license=__pkginfo__['license'],
+                 license=license,
                  description=__pkginfo__['description'],
                  long_description=long_description,
                  author=__pkginfo__['author'],
@@ -166,11 +178,6 @@ def install(**kwargs):
                  data_files=data_files,
                  ext_modules=ext_modules,
                  cmdclass=cmdclass,
-                 extras_require=extras_require,
-                 test_suite='test',
-                 python_requires='>=3.4.*',
-                 setup_requires=['pytest-runner'],
-                 tests_require=['pytest'],
                  **kwargs)
 
 if __name__ == '__main__':

@@ -1,29 +1,25 @@
-# -*- coding: utf-8 -*-
-# Copyright (c) 2006, 2010, 2012-2014 LOGILAB S.A. (Paris, FRANCE) <contact@logilab.fr>
-# Copyright (c) 2012-2014 Google, Inc.
-# Copyright (c) 2012 FELD Boris <lothiraldan@gmail.com>
-# Copyright (c) 2014-2017 Claudiu Popa <pcmanticore@gmail.com>
-# Copyright (c) 2014 Brett Cannon <brett@python.org>
-# Copyright (c) 2014 Ricardo Gemignani <ricardo.gemignani@gmail.com>
-# Copyright (c) 2014 Arun Persaud <arun@nubati.net>
-# Copyright (c) 2015 Simu Toni <simutoni@gmail.com>
-# Copyright (c) 2015 Ionel Cristian Maries <contact@ionelmc.ro>
-# Copyright (c) 2017 Kári Tristan Helgason <kthelgason@gmail.com>
-# Copyright (c) 2018 ssolanki <sushobhitsolanki@gmail.com>
-# Copyright (c) 2018 Sushobhit <31987769+sushobhit27@users.noreply.github.com>
-# Copyright (c) 2018 Ville Skyttä <ville.skytta@upcloud.com>
-
-# Licensed under the GPL: https://www.gnu.org/licenses/old-licenses/gpl-2.0.html
-# For details: https://github.com/PyCQA/pylint/blob/master/COPYING
-
+# Copyright (c) 2003-2013 LOGILAB S.A. (Paris, FRANCE).
+# This program is free software; you can redistribute it and/or modify it under
+# the terms of the GNU General Public License as published by the Free Software
+# Foundation; either version 2 of the License, or (at your option) any later
+# version.
+#
+# This program is distributed in the hope that it will be useful, but WITHOUT
+# ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
+# FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License along with
+# this program; if not, write to the Free Software Foundation, Inc.,
+# 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 """utilities methods and classes for reporters"""
 from __future__ import print_function
 
 import sys
 import locale
 import os
-import warnings
 
+
+from pylint import utils
 
 CMPS = ['=', '-', '+']
 
@@ -33,7 +29,7 @@ if sys.version_info >= (3, 0):
         return (a > b) - (a < b)
 
 def diff_string(old, new):
-    """given an old and new int value, return a string representing the
+    """given a old and new int value, return a string representing the
     difference
     """
     diff = abs(old - new)
@@ -41,7 +37,7 @@ def diff_string(old, new):
     return diff_str
 
 
-class BaseReporter:
+class BaseReporter(object):
     """base class for reporters
 
     symbols: show short symbolic names for messages.
@@ -51,25 +47,53 @@ class BaseReporter:
 
     def __init__(self, output=None):
         self.linter = None
+        # self.include_ids = None # Deprecated
+        # self.symbols = None # Deprecated
         self.section = 0
         self.out = None
         self.out_encoding = None
+        self.encode = None
         self.set_output(output)
         # Build the path prefix to strip to get relative paths
         self.path_strip_prefix = os.getcwd() + os.sep
 
     def handle_message(self, msg):
-        """Handle a new message triggered on the current file."""
+        """Handle a new message triggered on the current file.
+
+        Invokes the legacy add_message API by default."""
+        self.add_message(
+            msg.msg_id, (msg.abspath, msg.module, msg.obj, msg.line, msg.column),
+            msg.msg)
+
+    def add_message(self, msg_id, location, msg):
+        """Deprecated, do not use."""
+        raise NotImplementedError
 
     def set_output(self, output=None):
         """set output stream"""
         self.out = output or sys.stdout
+        # py3k streams handle their encoding :
+        if sys.version_info >= (3, 0):
+            self.encode = lambda x: x
+            return
+
+        def encode(string):
+            if not isinstance(string, unicode):
+                return string
+            encoding = (getattr(self.out, 'encoding', None) or
+                        locale.getdefaultlocale()[1] or
+                        sys.getdefaultencoding())
+            # errors=replace, we don't want to crash when attempting to show
+            # source code line that can't be encoded with the current locale
+            # settings
+            return string.encode(encoding, 'replace')
+        self.encode = encode
 
     def writeln(self, string=''):
         """write a line in the output buffer"""
-        print(string, file=self.out)
+        print(self.encode(string), file=self.out)
 
-    def display_reports(self, layout):
+    def display_results(self, layout):
         """display results encapsulated in the layout tree"""
         self.section = 0
         if hasattr(layout, 'report_id'):
@@ -80,24 +104,15 @@ class BaseReporter:
         """display the layout"""
         raise NotImplementedError()
 
-    def display_messages(self, layout):
-        """Hook for displaying the messages of the reporter
-
-        This will be called whenever the underlying messages
-        needs to be displayed. For some reporters, it probably
-        doesn't make sense to display messages as soon as they
-        are available, so some mechanism of storing them could be used.
-        This method can be implemented to display them after they've
-        been aggregated.
-        """
-
     # Event callbacks
 
     def on_set_current_module(self, module, filepath):
-        """Hook called when a module starts to be analysed."""
+        """starting analyzis of a module"""
+        pass
 
     def on_close(self, stats, previous_stats):
-        """Hook called when a module finished analyzing."""
+        """global end of analyzis"""
+        pass
 
 
 class CollectingReporter(BaseReporter):
@@ -112,10 +127,7 @@ class CollectingReporter(BaseReporter):
     def handle_message(self, msg):
         self.messages.append(msg)
 
-    _display = None
-
 
 def initialize(linter):
     """initialize linter with reporters in this package """
-    from pylint import utils
     utils.register_plugins(linter, __path__[0])

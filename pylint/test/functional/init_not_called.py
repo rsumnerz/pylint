@@ -1,21 +1,21 @@
-# pylint: disable=R0903,import-error,missing-docstring,wrong-import-position,useless-super-delegation, useless-object-inheritance, unnecessary-pass
+# pylint: disable=R0903
 """test for __init__ not called
 """
 from __future__ import print_function
 
-class AAAA:
+class AAAA:  # <3.0:[old-style-class]
     """ancestor 1"""
 
     def __init__(self):
         print('init', self)
 
-class BBBB:
+class BBBB:  # <3.0:[old-style-class]
     """ancestor 2"""
 
     def __init__(self):
         print('init', self)
 
-class CCCC:
+class CCCC:  # <3.0:[old-style-class,no-init]
     """ancestor 3"""
 
 
@@ -46,7 +46,7 @@ class Init(NoInit):
         self.arg = arg
 
 class NewStyleC(object):
-    """__init__ defined by assignment."""
+    """__init__ defined by assignemnt."""
     def xx_init(self):
         """Initializer."""
         pass
@@ -57,8 +57,3 @@ class AssignedInit(NewStyleC):
     """No init called."""
     def __init__(self):  # [super-init-not-called]
         self.arg = 0
-
-from missing import Missing
-
-class UnknownBases(Missing):
-    """Don't emit no-init if the bases aren't known."""

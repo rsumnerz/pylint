@@ -32,6 +32,8 @@ Description: python code static checker and UML diagram generator
  The included command pyreverse generates UML class and package
  diagrams.
  .
+ The recommended python-tk package is only for using the pylint-gui
+ script.
 
 Package: pylint3
 Architecture: all
@@ -55,3 +57,5 @@ Description: python code static checker and UML diagram generator
  The included command pyreverse generates UML class and package
  diagrams.
  .
+ The recommended python-tk package is only for using the pylint-gui
+ script.

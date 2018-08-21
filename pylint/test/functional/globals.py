@@ -23,10 +23,3 @@ def define_constant():
     """ok but somevar is not defined at the module scope"""
     global SOMEVAR  # [global-variable-undefined]
     SOMEVAR = 2
-
-
-# pylint: disable=invalid-name
-def global_with_import():
-    """should only warn for global-statement"""
-    global sys  # [global-statement]
-    import sys

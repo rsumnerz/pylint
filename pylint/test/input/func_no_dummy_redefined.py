@@ -1,5 +1,5 @@
 """Make sure warnings about redefinitions do not trigger for dummy variables."""
-from __future__ import print_function
+__revision__ = 0
 
 
 _, INTERESTING = 'a=b'.split('=')
@@ -11,4 +11,4 @@ def clobbering():
     """Clobbers a dummy name from the outer scope."""
     value = 9
     for _ in range(7):
-        print(value)
+        print value  # pylint: disable=print-statement

@@ -1,7 +1,7 @@
 """ docstring for file clientmodule.py """
 from data.suppliermodule_test import Interface, DoNothing
 
-class Ancestor:
+class Ancestor(object):
     """ Ancestor method """
     __implements__ = (Interface,)
     cls_member = DoNothing()

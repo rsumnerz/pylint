@@ -1,31 +1,26 @@
-# -*- coding: utf-8 -*-
-# Copyright (c) 2009-2011, 2013-2014 LOGILAB S.A. (Paris, FRANCE) <contact@logilab.fr>
-# Copyright (c) 2009, 2012, 2014 Google, Inc.
-# Copyright (c) 2012 Mike Bryant <leachim@leachim.info>
-# Copyright (c) 2014 Brett Cannon <brett@python.org>
-# Copyright (c) 2014 Arun Persaud <arun@nubati.net>
-# Copyright (c) 2015-2018 Claudiu Popa <pcmanticore@gmail.com>
-# Copyright (c) 2015 Ionel Cristian Maries <contact@ionelmc.ro>
-# Copyright (c) 2016 Chris Murray <chris@chrismurray.scot>
-# Copyright (c) 2016 Ashley Whetter <ashley@awhetter.co.uk>
-# Copyright (c) 2017 guillaume2 <guillaume.peillex@gmail.col>
-# Copyright (c) 2017 Łukasz Rogalski <rogalski.91@gmail.com>
-# Copyright (c) 2018 Mike Frysinger <vapier@gmail.com>
-# Copyright (c) 2018 Mariatta Wijaya <mariatta@python.org>
-# Licensed under the GPL: https://www.gnu.org/licenses/old-licenses/gpl-2.0.html
-# For details: https://github.com/PyCQA/pylint/blob/master/COPYING
-
+# Copyright (c) 2009-2010 Google, Inc.
+# This program is free software; you can redistribute it and/or modify it under
+# the terms of the GNU General Public License as published by the Free Software
+# Foundation; either version 2 of the License, or (at your option) any later
+# version.
+#
+# This program is distributed in the hope that it will be useful, but WITHOUT
+# ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
+# FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License along with
+# this program; if not, write to the Free Software Foundation, Inc.,
+# 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 """checker for use of Python logging
 """
-import string
 
 import astroid
-
 from pylint import checkers
 from pylint import interfaces
 from pylint.checkers import utils
 from pylint.checkers.utils import check_messages
 
+import six
 
 
 MSGS = {
@@ -40,7 +35,7 @@ MSGS = {
               'interpolation in those cases in which no message will be '
               'logged. For more, see '
               'http://www.python.org/dev/peps/pep-0282/.'),
-    'W1202': ('Use % formatting in logging functions and pass the % '
+    'W1202': ('Use % formatting in logging functions but pass the % '
               'parameters as arguments',
               'logging-format-interpolation',
               'Used when a logging statement has a call form of '
@@ -48,53 +43,47 @@ MSGS = {
               '. Such calls should use % formatting instead, but leave '
               'interpolation to the logging function by passing the parameters '
               'as arguments.'),
-    'W1203': ('Use % formatting in logging functions and pass the % '
-              'parameters as arguments',
-              'logging-fstring-interpolation',
-              'Used when a logging statement has a call form of '
-              '"logging.method(f\"...\"))"'
-              '. Such calls should use % formatting instead, but leave '
-              'interpolation to the logging function by passing the parameters '
-              'as arguments.'
-              ),
     'E1200': ('Unsupported logging format character %r (%#02x) at index %d',
               'logging-unsupported-format',
-              'Used when an unsupported format character is used in a logging '
-              'statement format string.'),
+              'Used when an unsupported format character is used in a logging\
+              statement format string.'),
     'E1201': ('Logging format string ends in middle of conversion specifier',
               'logging-format-truncated',
-              'Used when a logging statement format string terminates before '
-              'the end of a conversion specifier.'),
+              'Used when a logging statement format string terminates before\
+              the end of a conversion specifier.'),
     'E1205': ('Too many arguments for logging format string',
               'logging-too-many-args',
-              'Used when a logging format string is given too many arguments.'),
+              'Used when a logging format string is given too few arguments.'),
     'E1206': ('Not enough arguments for logging format string',
               'logging-too-few-args',
-              'Used when a logging format string is given too few arguments.'),
+              'Used when a logging format string is given too many arguments'),
     }
 
 
-CHECKED_CONVENIENCE_FUNCTIONS = {
-    'critical', 'debug', 'error', 'exception', 'fatal', 'info', 'warn', 'warning'
-}
+CHECKED_CONVENIENCE_FUNCTIONS = set([
+    'critical', 'debug', 'error', 'exception', 'fatal', 'info', 'warn',
+    'warning'])
 
-
-def is_method_call(func, types=(), methods=()):
-    """Determines if a BoundMethod node represents a method call.
+def is_method_call(callfunc_node, types=(), methods=()):
+    """Determines if a CallFunc node represents a method call.
 
     Args:
-      func (astroid.BoundMethod): The BoundMethod AST node to check.
-      types (Optional[String]): Optional sequence of caller type names to restrict check.
-      methods (Optional[String]): Optional sequence of method names to restrict check.
+      callfunc_node: The CallFunc AST node to check.
+      types: Optional sequence of caller type names to restrict check.
+      methods: Optional sequence of method names to restrict check.
 
     Returns:
-      bool: true if the node represents a method call for the given type and
+      True, if the node represents a method call for the given type and
       method names, False otherwise.
     """
+    if not isinstance(callfunc_node, astroid.CallFunc):
+        return False
+    func = utils.safe_infer(callfunc_node.func)
     return (isinstance(func, astroid.BoundMethod)
             and isinstance(func.bound, astroid.Instance)
             and (func.bound.name in types if types else True)
             and (func.name in methods if methods else True))
+
 
 
 class LoggingChecker(checkers.BaseChecker):
@@ -109,7 +98,7 @@ class LoggingChecker(checkers.BaseChecker):
                  'type': 'csv',
                  'metavar': '<comma separated list>',
                  'help': 'Logging modules to check that the string format '
-                         'arguments are in logging function parameter format.'}
+                         'arguments are in logging function parameter format'}
                ),
               )
 
@@ -128,7 +117,7 @@ class LoggingChecker(checkers.BaseChecker):
             if len(parts) > 1:
                 self._from_imports[parts[0]] = parts[1]
 
-    def visit_importfrom(self, node):
+    def visit_from(self, node):
         """Checks to see if a module uses a non-Python logging module."""
         try:
             logging_name = self._from_imports[node.modname]
@@ -145,10 +134,10 @@ class LoggingChecker(checkers.BaseChecker):
                 self._logging_names.add(as_name or module)
 
     @check_messages(*(MSGS.keys()))
-    def visit_call(self, node):
+    def visit_callfunc(self, node):
         """Checks calls to logging methods."""
         def is_logging_name():
-            return (isinstance(node.func, astroid.Attribute) and
+            return (isinstance(node.func, astroid.Getattr) and
                     isinstance(node.func.expr, astroid.Name) and
                     node.func.expr.name in self._logging_names)
 
@@ -157,7 +146,7 @@ class LoggingChecker(checkers.BaseChecker):
                 for inferred in node.func.infer():
                     if isinstance(inferred, astroid.BoundMethod):
                         parent = inferred._proxied.parent
-                        if (isinstance(parent, astroid.ClassDef) and
+                        if (isinstance(parent, astroid.Class) and
                                 (parent.qname() == 'logging.Logger' or
                                  any(ancestor.qname() == 'logging.Logger'
                                      for ancestor in parent.ancestors()))):
@@ -191,50 +180,28 @@ class LoggingChecker(checkers.BaseChecker):
         else:
             return
 
-        if isinstance(node.args[format_pos], astroid.BinOp):
-            binop = node.args[format_pos]
-            emit = binop.op == '%'
-            if binop.op == '+':
-                total_number_of_strings = sum(
-                    1 for operand in (binop.left, binop.right)
-                    if self._is_operand_literal_str(utils.safe_infer(operand))
-                )
-                emit = total_number_of_strings > 0
-            if emit:
-                self.add_message('logging-not-lazy', node=node)
-        elif isinstance(node.args[format_pos], astroid.Call):
+        if isinstance(node.args[format_pos], astroid.BinOp) and node.args[format_pos].op == '%':
+            self.add_message('logging-not-lazy', node=node)
+        elif isinstance(node.args[format_pos], astroid.CallFunc):
             self._check_call_func(node.args[format_pos])
         elif isinstance(node.args[format_pos], astroid.Const):
             self._check_format_string(node, format_pos)
-        elif isinstance(node.args[format_pos], (astroid.FormattedValue, astroid.JoinedStr)):
-            self.add_message('logging-fstring-interpolation', node=node)
 
-    @staticmethod
-    def _is_operand_literal_str(operand):
-        """
-        Return True if the operand in argument is a literal string
-        """
-        return isinstance(operand, astroid.Const) and operand.name == 'str'
-
-    def _check_call_func(self, node):
+    def _check_call_func(self, callfunc_node):
         """Checks that function call is not format_string.format().
 
         Args:
-          node (astroid.node_classes.Call):
-            Call AST node to be checked.
+          callfunc_node: CallFunc AST node to be checked.
         """
-        func = utils.safe_infer(node.func)
-        types = ('str', 'unicode')
-        methods = ('format',)
-        if is_method_call(func, types, methods) and not is_complex_format_str(func.bound):
-            self.add_message('logging-format-interpolation', node=node)
+        if is_method_call(callfunc_node, ('str', 'unicode'), ('format',)):
+            self.add_message('logging-format-interpolation', node=callfunc_node)
 
     def _check_format_string(self, node, format_arg):
         """Checks that format string tokens match the supplied arguments.
 
         Args:
-          node (astroid.node_classes.NodeNG): AST node to be checked.
-          format_arg (int): Index of the format string in the node arguments.
+          node: AST node to be checked.
+          format_arg: Index of the format string in the node arguments.
         """
         num_args = _count_supplied_tokens(node.args[format_arg + 1:])
         if not num_args:
@@ -242,7 +209,7 @@ class LoggingChecker(checkers.BaseChecker):
             # don't check any further.
             return
         format_string = node.args[format_arg].value
-        if not isinstance(format_string, str):
+        if not isinstance(format_string, six.string_types):
             # If the log format is constant non-string (e.g. logging.debug(5)),
             # ensure there are no arguments.
             required_num_args = 0
@@ -268,28 +235,6 @@ class LoggingChecker(checkers.BaseChecker):
             self.add_message('logging-too-few-args', node=node)
 
 
-def is_complex_format_str(node):
-    """Checks if node represents a string with complex formatting specs.
-
-    Args:
-        node (astroid.node_classes.NodeNG): AST node to check
-    Returns:
-        bool: True if inferred string uses complex formatting, False otherwise
-    """
-    inferred = utils.safe_infer(node)
-    if inferred is None or not isinstance(inferred.value, str):
-        return True
-    try:
-        parsed = list(string.Formatter().parse(inferred.value))
-    except ValueError:
-        # This format string is invalid
-        return False
-    for _, _, format_spec, _ in parsed:
-        if format_spec:
-            return True
-    return False
-
-
 def _count_supplied_tokens(args):
     """Counts the number of tokens in an args list.
 
@@ -298,10 +243,10 @@ def _count_supplied_tokens(args):
     arguments that aren't keywords.
 
     Args:
-      args (list): AST nodes that are arguments for a log format string.
+      args: List of AST nodes that are arguments for a log format string.
 
     Returns:
-      int: Number of AST nodes that aren't keywords.
+      Number of AST nodes that aren't keywords.
     """
     return sum(1 for arg in args if not isinstance(arg, astroid.Keyword))
 

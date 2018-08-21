@@ -1,8 +1,6 @@
 """Regression test case for bad-continuation."""
-# pylint: disable=print-statement,using-constant-test,missing-docstring,wrong-import-position
+# pylint: disable=print-statement
 # Various alignment for brackets
-from __future__ import print_function
-
 LIST0 = [
     1, 2, 3
 ]
@@ -93,29 +91,29 @@ W9 = {'key1':
 def continue1(some_arg,
               some_other_arg):
     """A function with well-aligned arguments."""
-    print(some_arg, some_other_arg)
+    print some_arg, some_other_arg
 
 
 def continue2(
         some_arg,
         some_other_arg):
     """A function with well-aligned arguments."""
-    print(some_arg, some_other_arg)
+    print some_arg, some_other_arg
 
 def continue3(
     some_arg,         # [bad-continuation]
     some_other_arg):  # [bad-continuation]
     """A function with misaligned arguments"""
-    print(some_arg, some_other_arg)
+    print some_arg, some_other_arg
 
 def continue4(  # pylint:disable=missing-docstring
     arg1,
-    arg2): print(arg1, arg2)
+    arg2): print arg1, arg2
 
 
 def callee(*args):
     """noop"""
-    print(args)
+    print args
 
 
 callee(
@@ -162,7 +160,7 @@ if (1 or
 
 if (1 or
      2 or  # [bad-continuation]
-    3): print(1, 2)
+    3): print 1, 2
 
 if (1 and
   2): pass  # [bad-continuation]
@@ -179,54 +177,13 @@ L1 = (lambda a,
 
 if not (1 and
         2):
-    print(3)
+    print 3
 
 if not (1 and
     2):  # [bad-continuation]
-    print(3)
+    print 3
 
 continue2("foo",
           some_other_arg="this "
                          "is "
                          "fine")
-
-from contextlib import contextmanager
-@contextmanager
-def mycontext(*args):
-    yield args
-
-with mycontext(
-        "this is",
-        "great stuff",
-        "mane"):
-    pass
-
-# pylint: disable=using-constant-test
-# More indentation included to distinguish this from the rest.
-def long_function_name(
-        var_one, var_two, var_three,
-        var_four):
-    print(var_one, var_two, var_three, var_four)
-
-
-def short_func_name(first, second, third):
-    # Add some extra indentation on the conditional continuation line.
-    if (first
-            and second == first == 'some_big_long_statement_that_should_not_trigger'):
-        third()
-
-
-# Some normal multi-line statements with double-indented continuation lines.
-LARGE_COLLECTION = [
-        "spam",
-        "eggs",
-        "beans",
-        ]
-
-long_function_name(
-        "1", "2", "3", "4")
-
-CONCATENATED_TEXT = (
-        "spam"
-        "eggs"
-        "beans")

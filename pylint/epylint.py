@@ -1,26 +1,19 @@
-# -*- coding: utf-8;
-# mode: python; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4
-# -*- vim:fenc=utf-8:ft=python:et:sw=4:ts=4:sts=4
-
-# Copyright (c) 2008-2014 LOGILAB S.A. (Paris, FRANCE) <contact@logilab.fr>
-# Copyright (c) 2014 Jakob Normark <jakobnormark@gmail.com>
-# Copyright (c) 2014 Brett Cannon <brett@python.org>
-# Copyright (c) 2014 Manuel Vázquez Acosta <mva.led@gmail.com>
-# Copyright (c) 2014 Derek Harland <derek.harland@finq.co.nz>
-# Copyright (c) 2014 Arun Persaud <arun@nubati.net>
-# Copyright (c) 2015-2017 Claudiu Popa <pcmanticore@gmail.com>
-# Copyright (c) 2015 Mihai Balint <balint.mihai@gmail.com>
-# Copyright (c) 2015 Ionel Cristian Maries <contact@ionelmc.ro>
-# Copyright (c) 2017 hippo91 <guillaume.peillex@gmail.com>
-# Copyright (c) 2017 Daniela Plascencia <daplascen@gmail.com>
-# Copyright (c) 2018 Sushobhit <31987769+sushobhit27@users.noreply.github.com>
-# Copyright (c) 2018 Ryan McGuire <ryan@enigmacurry.com>
-# Copyright (c) 2018 thernstig <30827238+thernstig@users.noreply.github.com>
-# Copyright (c) 2018 Radostin Stoyanov <rst0git@users.noreply.github.com>
-
-# Licensed under the GPL: https://www.gnu.org/licenses/old-licenses/gpl-2.0.html
-# For details: https://github.com/PyCQA/pylint/blob/master/COPYING
-
+# -*- coding: utf-8; mode: python; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*- vim:fenc=utf-8:ft=python:et:sw=4:ts=4:sts=4
+# Copyright (c) 2003-2013 LOGILAB S.A. (Paris, FRANCE).
+# http://www.logilab.fr/ -- mailto:contact@logilab.fr
+#
+# This program is free software; you can redistribute it and/or modify it under
+# the terms of the GNU General Public License as published by the Free Software
+# Foundation; either version 2 of the License, or (at your option) any later
+# version.
+#
+# This program is distributed in the hope that it will be useful, but WITHOUT
+# ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
+# FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details
+#
+# You should have received a copy of the GNU General Public License along with
+# this program; if not, write to the Free Software Foundation, Inc.,
+# 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 """Emacs and Flymake compatible Pylint.
 
 This script is for integration with emacs and is compatible with flymake mode.
@@ -54,13 +47,9 @@ its output.
 """
 from __future__ import print_function
 
-import os
+import sys, os
 import os.path as osp
-import sys
-import shlex
 from subprocess import Popen, PIPE
-from io import StringIO
-
 
 def _get_env():
     '''Extracts the environment PYTHONPATH and appends the current sys.path to
@@ -69,7 +58,7 @@ def _get_env():
     env['PYTHONPATH'] = os.pathsep.join(sys.path)
     return env
 
-def lint(filename, options=()):
+def lint(filename, options=None):
     """Pylint the given file.
 
     When run from emacs we will be in the directory of a file, and passed its
@@ -96,10 +85,12 @@ def lint(filename, options=()):
 
     # Start pylint
     # Ensure we use the python and pylint associated with the running epylint
-    run_cmd = "import sys; from pylint.lint import Run; Run(sys.argv[1:])"
-    cmd = [sys.executable, "-c", run_cmd] + [
+    from pylint import lint as lint_mod
+    lint_path = lint_mod.__file__
+    options = options or ['--disable=C,R,I']
+    cmd = [sys.executable, lint_path] + options + [
         '--msg-template', '{path}:{line}: {category} ({msg_id}, {symbol}, {obj}) {msg}',
-        '-r', 'n', child_path] + list(options)
+        '-r', 'n', child_path]
     process = Popen(cmd, stdout=PIPE, cwd=parent_path, env=_get_env(),
                     universal_newlines=True)
 
@@ -118,7 +109,8 @@ def lint(filename, options=()):
     return process.returncode
 
 
-def py_run(command_options='', return_std=False, stdout=None, stderr=None):
+def py_run(command_options='', return_std=False, stdout=None, stderr=None,
+           script='epylint'):
     """Run pylint from python
 
     ``command_options`` is a string containing ``pylint`` command line options;
@@ -136,14 +128,19 @@ def py_run(command_options='', return_std=False, stdout=None, stderr=None):
     containing standard output and error related to created process,
     as follows: ``(stdout, stderr)``.
 
+    A trivial usage could be as follows:
+        >>> py_run( '--version')
+        No config file found, using default configuration
+        pylint 0.18.1,
+            ...
+
     To silently run Pylint on a module, and get its standard output and error:
         >>> (pylint_stdout, pylint_stderr) = py_run( 'module_name.py', True)
     """
     # Create command line to call pylint
-    epylint_part = [sys.executable, "-c", "from pylint import epylint;epylint.Run()"]
-    options = shlex.split(command_options, posix=not sys.platform.startswith('win'))
-    cli = epylint_part + options
-
+    if os.name == 'nt':
+        script += '.bat'
+    command_line = script + ' ' + command_options
     # Providing standard output and/or error if not set
     if stdout is None:
         if return_std:
@@ -156,13 +153,12 @@ def py_run(command_options='', return_std=False, stdout=None, stderr=None):
         else:
             stderr = sys.stderr
     # Call pylint in a subprocess
-    process = Popen(cli, shell=False, stdout=stdout, stderr=stderr,
-                    env=_get_env(), universal_newlines=True)
-    proc_stdout, proc_stderr = process.communicate()
+    p = Popen(command_line, shell=True, stdout=stdout, stderr=stderr,
+              env=_get_env(), universal_newlines=True)
+    p.wait()
     # Return standard output and error
     if return_std:
-        return StringIO(proc_stdout), StringIO(proc_stderr)
-    return None
+        return (p.stdout, p.stderr)
 
 
 def Run():

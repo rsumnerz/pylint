@@ -1,4 +1,4 @@
-# pylint:disable=R0201, print-statement, too-few-public-methods, useless-object-inheritance
+# pylint:disable=R0201, print-statement, too-few-public-methods
 """Checks that class variables are seen as inherited !
 """
 __revision__ = ''
@@ -28,7 +28,7 @@ class MyClass(BaseClass):
         """
         self.var[1] = 'one'
         self.base_var[1] = 'one'
-        return self.base_var, self.var
+        print self.base_var, self.var
 
 if __name__ == '__main__':
     OBJ = MyClass()

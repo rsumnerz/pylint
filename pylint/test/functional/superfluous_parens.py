@@ -1,10 +1,9 @@
 """Test the superfluous-parens warning."""
 from __future__ import print_function
-# pylint: disable=unneeded-not
-i = 3
-if (i == 5):  # [superfluous-parens]
+
+if (3 == 5):  # [superfluous-parens]
     pass
-if not (i == 5):  # [superfluous-parens]
+if not (3 == 5):  # [superfluous-parens]
     pass
 if not (3 or 5):
     pass

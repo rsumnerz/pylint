@@ -3,14 +3,14 @@
 abstract methods.
 """
 
-# pylint: disable=too-few-public-methods, missing-docstring, useless-object-inheritance
-# pylint: disable=no-absolute-import, metaclass-assignment
-# pylint: disable=abstract-method, import-error, wildcard-import
+# pylint: disable=too-few-public-methods, missing-docstring, abstract-class-not-used
+# pylint: disable=no-absolute-import, metaclass-assignment, abstract-class-little-used
+# pylint: disable=abstract-method
+
+__revision__ = 0
 
 import abc
 from abc import ABCMeta
-from lala import Bala
-
 
 class GoodClass(object):
     __metaclass__ = abc.ABCMeta
@@ -54,20 +54,6 @@ class ThirdBadClass(object):
 
 class FourthBadClass(ThirdBadClass):
     pass
-
-
-class SomeMetaclass(object):
-    __metaclass__ = ABCMeta
-
-    @abc.abstractmethod
-    def prop(self):
-        pass
-
-class FifthGoodClass(SomeMetaclass):
-    """Don't consider this abstract if some attributes are
-    there, but can't be inferred.
-    """
-    prop = Bala # missing
 
 
 def main():

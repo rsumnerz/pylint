@@ -1,4 +1,4 @@
-# pylint: disable=R0903, useless-object-inheritance
+# pylint: disable=R0903
 """#10075"""
 
 __revision__ = 1
@@ -10,3 +10,4 @@ class Aaa(object):
             """inner docstring"""
             return arg + 4
         self.func = inner_function
+

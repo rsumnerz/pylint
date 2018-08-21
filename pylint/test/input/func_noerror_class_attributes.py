@@ -1,6 +1,5 @@
 """Test that valid class attribute doesn't trigger errors"""
 __revision__ = 'sponge bob'
-# pylint: disable=useless-object-inheritance
 
 class Clazz(object):
     "dummy class"

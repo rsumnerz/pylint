@@ -1,5 +1,4 @@
 """Checks that missing self in method defs don't crash Pylint."""
-# pylint: disable=useless-object-inheritance
 
 
 

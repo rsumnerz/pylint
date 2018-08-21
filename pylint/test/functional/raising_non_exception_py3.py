@@ -3,7 +3,7 @@
 Previously, it didn't, due to a bug in the check for bad-exception-context,
 which prevented further checking on the Raise node.
 """
-# pylint: disable=import-error, too-few-public-methods, useless-object-inheritance
+# pylint: disable=import-error, too-few-public-methods
 
 from missing_module import missing
 

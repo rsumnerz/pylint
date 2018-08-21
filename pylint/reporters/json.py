@@ -1,17 +1,22 @@
-# Copyright (c) 2014 Vlad Temian <vladtemian@gmail.com>
-# Copyright (c) 2015-2017 Claudiu Popa <pcmanticore@gmail.com>
-# Copyright (c) 2015 Ionel Cristian Maries <contact@ionelmc.ro>
-# Copyright (c) 2017 guillaume2 <guillaume.peillex@gmail.col>
-
-# Licensed under the GPL: https://www.gnu.org/licenses/old-licenses/gpl-2.0.html
-# For details: https://github.com/PyCQA/pylint/blob/master/COPYING
-
+# Copyright (c) 2003-2014 LOGILAB S.A. (Paris, FRANCE).
+# This program is free software; you can redistribute it and/or modify it under
+# the terms of the GNU General Public License as published by the Free Software
+# Foundation; either version 2 of the License, or (at your option) any later
+# version.
+#
+# This program is distributed in the hope that it will be useful, but WITHOUT
+# ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
+# FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License along with
+# this program; if not, write to the Free Software Foundation, Inc.,
+# 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 """JSON reporter"""
 from __future__ import absolute_import, print_function
 
-import cgi
 import json
 import sys
+from cgi import escape
 
 from pylint.interfaces import IReporter
 from pylint.reporters import BaseReporter
@@ -28,31 +33,24 @@ class JSONReporter(BaseReporter):
         BaseReporter.__init__(self, output)
         self.messages = []
 
-    def handle_message(self, msg):
+    def handle_message(self, message):
         """Manage message of different type and in the context of path."""
+
         self.messages.append({
-            'type': msg.category,
-            'module': msg.module,
-            'obj': msg.obj,
-            'line': msg.line,
-            'column': msg.column,
-            'path': msg.path,
-            'symbol': msg.symbol,
-            # pylint: disable=deprecated-method; deprecated since 3.2.
-            'message': cgi.escape(msg.msg or ''),
-            'message-id': msg.msg_id,
+            'type': message.category,
+            'module': message.module,
+            'obj': message.obj,
+            'line': message.line,
+            'column': message.column,
+            'path': message.path,
+            'symbol': message.symbol,
+            'message': escape(message.msg or ''),
         })
 
-    def display_messages(self, layout):
+    def _display(self, layout):
         """Launch layouts display"""
         if self.messages:
             print(json.dumps(self.messages, indent=4), file=self.out)
-
-    def display_reports(self, layout): # pylint: disable=arguments-differ
-        """Don't do nothing in this reporter."""
-
-    def _display(self, layout):
-        """Don't do nothing."""
 
 
 def register(linter):

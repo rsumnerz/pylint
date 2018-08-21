@@ -1,4 +1,4 @@
-"""Check for else branches on loops with break and return only."""
+"""Check for else branches on loops with break an return only."""
 from __future__ import print_function
 __revision__ = 0
 
@@ -9,7 +9,6 @@ def test_return_for():
             return i
     else:  # [useless-else-on-loop]
         print('math is broken')
-    return None
 
 def test_return_while():
     """else + return is not accetable."""
@@ -17,7 +16,6 @@ def test_return_while():
         return 1
     else:  # [useless-else-on-loop]
         print('math is broken')
-    return None
 
 
 while True:
@@ -42,48 +40,16 @@ else:  # [useless-else-on-loop]
     for j in range(10):
         break
 
-
 def test_return_for2():
     """no false positive for break in else
 
     https://bitbucket.org/logilab/pylint/issue/117/useless-else-on-loop-false-positives
     """
     for i in range(10):
-        for _ in range(i):
+        for i in range(i):
             if i % 2:
                 break
         else:
             break
     else:
         print('great math')
-
-
-def test_break_in_orelse_deep():
-    """no false positive for break in else deeply nested
-    """
-    for _ in range(10):
-        if 1 < 2:
-            for _ in range(3):
-                if 3 < 2:
-                    break
-            else:
-                break
-    else:
-        return True
-    return False
-
-
-def test_break_in_orelse_deep2():
-    """should rise a useless-else-on-loop message, as the break statement is only
-    for the inner for loop
-    """
-    for _ in range(10):
-        if 1 < 2:
-            for _ in range(3):
-                if 3 < 2:
-                    break
-            else:
-                print("all right")
-    else:  # [useless-else-on-loop]
-        return True
-    return False

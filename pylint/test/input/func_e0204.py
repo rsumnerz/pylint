@@ -1,6 +1,5 @@
 """check for method without self as first argument
 """
-# pylint: disable=useless-object-inheritance
 from __future__ import print_function
 __revision__ = 0
 

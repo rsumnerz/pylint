@@ -1,4 +1,4 @@
-# pylint: disable=R0903, useless-object-inheritance
+# pylint: disable=R0903
 """
 Simple test case for an annoying behavior in pylint.
 """

@@ -2,7 +2,7 @@
 from __future__ import absolute_import
 from functional.unpacking import unpack
 
-# pylint: disable=using-constant-test, useless-object-inheritance
+__revision__ = 0
 
 def do_stuff():
     """This is not right."""
@@ -46,17 +46,17 @@ def temp():
     return [2, 3, 4]
 
 def do_stuff7():
-    """ This is not right, but we're not sure """
-    first, second = temp()
+    """ This is not right """
+    first, second = temp() # [unbalanced-tuple-unpacking]
     return first + second
 
 def temp2():
     """ This is weird, but correct """
     if True:
         return (1, 2)
-
-    if True:
-        return (2, 3)
+    else:
+        if True:
+            return (2, 3)
     return (4, 5)
 
 def do_stuff8():
@@ -74,9 +74,7 @@ class UnbalancedUnpacking(object):
     # pylint: disable=attribute-defined-outside-init, invalid-name, too-few-public-methods
     def test(self):
         """ unpacking in instance attributes """
-        # we're not sure if temp() returns two or three values
-        # so we shouldn't emit an error
-        self.a, self.b = temp()
+        self.a, self.b = temp() # [unbalanced-tuple-unpacking]
         self.a, self.b = temp2()
         self.a, self.b = unpack() # [unbalanced-tuple-unpacking]
 
@@ -88,21 +86,3 @@ def issue329(*args):
     """
     first, second, third = args
     return first, second, third
-
-
-def test_decimal():
-    """Test a false positive with decimal.Decimal.as_tuple
-
-    See astroid https://bitbucket.org/logilab/astroid/issues/92/
-    """
-    from decimal import Decimal
-    dec = Decimal(2)
-    first, second, third = dec.as_tuple()
-    return first, second, third
-
-
-def test_issue_559():
-    """Test that we don't have a false positive wrt to issue #559."""
-    from ctypes import c_int
-    root_x, root_y, win_x, win_y = [c_int()] * 4
-    return root_x, root_y, win_x, win_y

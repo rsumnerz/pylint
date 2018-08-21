@@ -1,15 +1,18 @@
-# Copyright (c) 2006-2011, 2013-2014 LOGILAB S.A. (Paris, FRANCE) <contact@logilab.fr>
-# Copyright (c) 2012 FELD Boris <lothiraldan@gmail.com>
-# Copyright (c) 2014 Google, Inc.
-# Copyright (c) 2014 Arun Persaud <arun@nubati.net>
-# Copyright (c) 2015-2018 Claudiu Popa <pcmanticore@gmail.com>
-# Copyright (c) 2015 Ionel Cristian Maries <contact@ionelmc.ro>
-# Copyright (c) 2016-2017 Derek Gustafson <degustaf@gmail.com>
-# Copyright (c) 2018 Reverb C <reverbc@users.noreply.github.com>
-
-# Licensed under the GPL: https://www.gnu.org/licenses/old-licenses/gpl-2.0.html
-# For details: https://github.com/PyCQA/pylint/blob/master/COPYING
-
+# Copyright (c) 2005-2014 LOGILAB S.A. (Paris, FRANCE).
+# http://www.logilab.fr/ -- mailto:contact@logilab.fr
+#
+# This program is free software; you can redistribute it and/or modify it under
+# the terms of the GNU General Public License as published by the Free Software
+# Foundation; either version 2 of the License, or (at your option) any later
+# version.
+#
+# This program is distributed in the hope that it will be useful, but WITHOUT
+# ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
+# FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License along with
+# this program; if not, write to the Free Software Foundation, Inc.,
+# 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 """non regression tests for pylint, which requires a too specific configuration
 to be incorporated in the automatic functional test framework
 """
@@ -17,112 +20,123 @@ to be incorporated in the automatic functional test framework
 import sys
 import os
 from os.path import abspath, dirname, join
+import unittest
 
-import pytest
+from pylint.testutils import TestReporter
+from pylint.lint import PyLinter
+from pylint import checkers
 
-import astroid
-import pylint.testutils as testutils
-from pylint import epylint
-
+test_reporter = TestReporter()
+linter = PyLinter()
+linter.set_reporter(test_reporter)
+linter.disable('I')
+linter.config.persistent = 0
+checkers.initialize(linter)
 
 REGR_DATA = join(dirname(abspath(__file__)), 'regrtest_data')
 sys.path.insert(1, REGR_DATA)
 
-try:
-    PYPY_VERSION_INFO = sys.pypy_version_info
-except AttributeError:
-    PYPY_VERSION_INFO = None
+class NonRegrTC(unittest.TestCase):
+    def setUp(self):
+        """call reporter.finalize() to cleanup
+        pending messages if a test finished badly
+        """
+        linter.reporter.finalize()
+
+    def test_package___path___manipulation(self):
+        linter.check('package.__init__')
+        got = linter.reporter.finalize().strip()
+        self.assertEqual(got, '')
+
+    def test_package___init___precedence(self):
+        linter.check('precedence_test')
+        got = linter.reporter.finalize().strip()
+        self.assertEqual(got, '')
+
+    def test_check_package___init__(self):
+        for variation in ('package.__init__', join(REGR_DATA, 'package', '__init__.py')):
+            linter.check(variation)
+            got = linter.reporter.finalize().strip()
+            checked = linter.stats['by_module'].keys()
+            self.assertEqual(checked, ['package.__init__'],
+                             '%s: %s' % (variation, checked))
+        cwd = os.getcwd()
+        os.chdir(join(REGR_DATA, 'package'))
+        sys.path.insert(0, '')
+        try:
+            for variation in ('__init__', '__init__.py'):
+                linter.check(variation)
+                got = linter.reporter.finalize().strip()
+                checked = linter.stats['by_module'].keys()
+                self.assertEqual(checked, ['__init__'],
+                                 '%s: %s' % (variation, checked))
+        finally:
+            sys.path.pop(0)
+            os.chdir(cwd)
+
+    def test_numarray_inference(self):
+        try:
+            from numarray import random_array
+        except ImportError:
+            self.skipTest('test skipped: numarray.random_array is not available')
+        linter.check(join(REGR_DATA, 'numarray_inf.py'))
+        got = linter.reporter.finalize().strip()
+        self.assertEqual(got, "E:  5: Instance of 'int' has no 'astype' member (but some types could not be inferred)")
+
+    def test_numarray_import(self):
+        try:
+            import numarray
+        except ImportError:
+            self.skipTest('test skipped: numarray is not available')
+        linter.check(join(REGR_DATA, 'numarray_import.py'))
+        got = linter.reporter.finalize().strip()
+        self.assertEqual(got, '')
+
+    def test_class__doc__usage(self):
+        linter.check(join(REGR_DATA, 'classdoc_usage.py'))
+        got = linter.reporter.finalize().strip()
+        self.assertEqual(got, '')
+
+    def test_package_import_relative_subpackage_no_attribute_error(self):
+        linter.check('import_package_subpackage_module')
+        got = linter.reporter.finalize().strip()
+        self.assertEqual(got, '')
+
+    def test_import_assign_crash(self):
+        linter.check(join(REGR_DATA, 'import_assign.py'))
+
+    def test_special_attr_scope_lookup_crash(self):
+        linter.check(join(REGR_DATA, 'special_attr_scope_lookup_crash.py'))
+
+    def test_module_global_crash(self):
+        linter.check(join(REGR_DATA, 'module_global.py'))
+        got = linter.reporter.finalize().strip()
+        self.assertEqual(got, '')
+
+    def test_decimal_inference(self):
+        linter.check(join(REGR_DATA, 'decimal_inference.py'))
+        got = linter.reporter.finalize().strip()
+        self.assertEqual(got, "")
+
+    def test_descriptor_crash(self):
+        for fname in os.listdir(REGR_DATA):
+            if fname.endswith('_crash.py'):
+                linter.check(join(REGR_DATA, fname))
+                linter.reporter.finalize().strip()
+
+    def test_try_finally_disable_msg_crash(self):
+        linter.check(join(REGR_DATA, 'try_finally_disable_msg_crash'))
+
+    def test___path__(self):
+        linter.check('pylint.checkers.__init__')
+        messages = linter.reporter.finalize().strip()
+        self.assertFalse('__path__' in messages, messages)
+
+    def test_absolute_import(self):
+        linter.check(join(REGR_DATA, 'absimp', 'string.py'))
+        got = linter.reporter.finalize().strip()
+        self.assertEqual(got, "")
 
 
-@pytest.fixture(scope="module")
-def reporter(reporter):
-    return testutils.TestReporter
-
-
-@pytest.fixture(scope="module")
-def disable(disable):
-    return ['I']
-
-
-@pytest.fixture
-def finalize_linter(linter):
-    """call reporter.finalize() to cleanup
-    pending messages if a test finished badly
-    """
-    yield linter
-    linter.reporter.finalize()
-
-
-def Equals(expected):
-    return lambda got: got == expected
-
-
-@pytest.mark.parametrize("file_name, check", [
-    ("package.__init__", Equals("")),
-    ("precedence_test", Equals("")),
-    ("import_package_subpackage_module", Equals("")),
-    ("pylint.checkers.__init__", lambda x: '__path__' not in x),
-    (join(REGR_DATA, "classdoc_usage.py"), Equals("")),
-    (join(REGR_DATA, "module_global.py"), Equals("")),
-    (join(REGR_DATA, "decimal_inference.py"), Equals("")),
-    (join(REGR_DATA, 'absimp', 'string.py'), Equals("")),
-    (join(REGR_DATA, 'bad_package'),
-        lambda x: "Unused import missing" in x),
-
-])
-def test_package(finalize_linter, file_name, check):
-    finalize_linter.check(file_name)
-    got = finalize_linter.reporter.finalize().strip()
-    assert check(got)
-
-
-@pytest.mark.parametrize("file_name", [
-    join(REGR_DATA, 'import_assign.py'),
-    join(REGR_DATA, 'special_attr_scope_lookup_crash.py'),
-    join(REGR_DATA, 'try_finally_disable_msg_crash'),
-])
-def test_crash(finalize_linter, file_name):
-    finalize_linter.check(file_name)
-
-
-@pytest.mark.parametrize("fname", [x for x in os.listdir(REGR_DATA)
-                                   if x.endswith('_crash.py')])
-def test_descriptor_crash(fname, finalize_linter):
-    finalize_linter.check(join(REGR_DATA, fname))
-    finalize_linter.reporter.finalize().strip()
-
-
-@pytest.fixture
-def modify_path():
-    cwd = os.getcwd()
-    sys.path.insert(0, '')
-    yield
-    sys.path.pop(0)
-    os.chdir(cwd)
-
-
-@pytest.mark.usefixtures("modify_path")
-def test_check_package___init__(finalize_linter):
-    filename = 'package.__init__'
-    finalize_linter.check(filename)
-    checked = list(finalize_linter.stats['by_module'].keys())
-    assert checked == [filename]
-
-    os.chdir(join(REGR_DATA, 'package'))
-    finalize_linter.check('__init__')
-    checked = list(finalize_linter.stats['by_module'].keys())
-    assert checked == ['__init__']
-
-
-def test_pylint_config_attr():
-    mod = astroid.MANAGER.ast_from_module_name('pylint.lint')
-    pylinter = mod['PyLinter']
-    expect = ['OptionsManagerMixIn', 'object', 'MessagesHandlerMixIn',
-              'ReportsHandlerMixIn', 'BaseTokenChecker', 'BaseChecker',
-              'OptionsProviderMixIn']
-    assert [c.name for c in pylinter.ancestors()] == expect
-    assert list(astroid.Instance(pylinter).getattr('config'))
-    inferred = list(astroid.Instance(pylinter).igetattr('config'))
-    assert len(inferred) == 1
-    assert inferred[0].root().name == 'optparse'
-    assert inferred[0].name == 'Values'
+if __name__ == '__main__':
+    unittest.main()

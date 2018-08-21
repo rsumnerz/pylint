@@ -1,4 +1,4 @@
-# pylint: disable=R0903, useless-object-inheritance
+# pylint: disable=R0903
 """Test case for the problem described below :
  - A class extends 'object'
  - This class defines its own __init__()
@@ -16,3 +16,4 @@ class Statement(object):
     def __init__(self):
         pass
     object = None
+

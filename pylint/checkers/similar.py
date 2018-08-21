@@ -1,33 +1,35 @@
-# Copyright (c) 2006, 2008-2014 LOGILAB S.A. (Paris, FRANCE) <contact@logilab.fr>
-# Copyright (c) 2012 Ry4an Brase <ry4an-hg@ry4an.org>
-# Copyright (c) 2012 Google, Inc.
-# Copyright (c) 2012 Anthony VEREZ <anthony.verez.external@cassidian.com>
-# Copyright (c) 2014-2018 Claudiu Popa <pcmanticore@gmail.com>
-# Copyright (c) 2014 Brett Cannon <brett@python.org>
-# Copyright (c) 2014 Arun Persaud <arun@nubati.net>
-# Copyright (c) 2015 Ionel Cristian Maries <contact@ionelmc.ro>
-# Copyright (c) 2017 Anthony Sottile <asottile@umich.edu>
-# Copyright (c) 2017 Mikhail Fesenko <proggga@gmail.com>
-# Copyright (c) 2018 ssolanki <sushobhitsolanki@gmail.com>
-
-# Licensed under the GPL: https://www.gnu.org/licenses/old-licenses/gpl-2.0.html
-# For details: https://github.com/PyCQA/pylint/blob/master/COPYING
-
 # pylint: disable=W0622
+# Copyright (c) 2004-2013 LOGILAB S.A. (Paris, FRANCE).
+# http://www.logilab.fr/ -- mailto:contact@logilab.fr
+#
+# This program is free software; you can redistribute it and/or modify it under
+# the terms of the GNU General Public License as published by the Free Software
+# Foundation; either version 2 of the License, or (at your option) any later
+# version.
+#
+# This program is distributed in the hope that it will be useful, but WITHOUT
+# ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
+# FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details
+#
+# You should have received a copy of the GNU General Public License along with
+# this program; if not, write to the Free Software Foundation, Inc.,
+# 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 """a similarities / code duplication command line tool and pylint checker
 """
-
 from __future__ import print_function
 import sys
 from collections import defaultdict
 
-from pylint.utils import decoding_stream
+from logilab.common.ureports import Table
+
 from pylint.interfaces import IRawChecker
 from pylint.checkers import BaseChecker, table_lines_from_stats
-from pylint.reporters.ureports.nodes import Table
+
+import six
+from six.moves import zip
 
 
-class Similar:
+class Similar(object):
     """finds copy-pasted lines of code in a project"""
 
     def __init__(self, min_lines=4, ignore_comments=False,
@@ -43,7 +45,7 @@ class Similar:
         if encoding is None:
             readlines = stream.readlines
         else:
-            readlines = decoding_stream(stream, encoding).readlines
+            readlines = lambda: [line.decode(encoding) for line in stream]
         try:
             self.linesets.append(LineSet(streamid,
                                          readlines(),
@@ -68,9 +70,9 @@ class Similar:
                     couples.add((lineset2, idx2))
                     break
             else:
-                duplicate.append({(lineset1, idx1), (lineset2, idx2)})
+                duplicate.append(set([(lineset1, idx1), (lineset2, idx2)]))
         sims = []
-        for num, ensembles in no_duplicates.items():
+        for num, ensembles in six.iteritems(no_duplicates):
             for couples in ensembles:
                 sims.append((num, couples))
         sims.sort()
@@ -162,7 +164,7 @@ def stripped_lines(lines, ignore_comments, ignore_docstrings, ignore_imports):
     return strippedlines
 
 
-class LineSet:
+class LineSet(object):
     """Holds and indexes all the lines of a single source file"""
     def __init__(self, name, lines, ignore_comments=False,
                  ignore_docstrings=False, ignore_imports=False):
@@ -217,9 +219,9 @@ class LineSet:
 
 MSGS = {'R0801': ('Similar lines in %s files\n%s',
                   'duplicate-code',
-                  'Indicates that a set of similar lines has been detected '
-                  'among multiple file. This usually means that the code should '
-                  'be refactored to avoid this duplication.')}
+                  'Indicates that a set of similar lines has been detected \
+                  among multiple file. This usually means that the code should \
+                  be refactored to avoid this duplication.')}
 
 def report_similarities(sect, stats, old_stats):
     """make a layout with some stats about duplication"""
@@ -304,7 +306,7 @@ class SimilarChecker(BaseChecker, Similar):
 
     def close(self):
         """compute and display similarities on closing (i.e. end of parsing)"""
-        total = sum(len(lineset) for lineset in self.linesets)
+        total = sum([len(lineset) for lineset in self.linesets])
         duplicated = 0
         stats = self.stats
         for num, couples in self._compute_sims():

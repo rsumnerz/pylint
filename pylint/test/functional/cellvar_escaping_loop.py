@@ -1,6 +1,5 @@
 # pylint: disable=print-statement
 """Tests for loopvar-in-closure."""
-from __future__ import print_function
 
 def good_case():
     """No problems here."""
@@ -17,7 +16,7 @@ def good_case2():
 def good_case3():
     """No problems here."""
     lst = []
-    for i in range(10):
+    for i in range(10):  # [unused-variable]
         lst.append(lambda i=i: i)
 
 
@@ -25,7 +24,7 @@ def good_case4():
     """No problems here."""
     lst = []
     for i in range(10):
-        print(i)
+        print i
         lst.append(lambda i: i)
 
 
@@ -40,7 +39,7 @@ def good_case6():
     There's already a warning about possibly undefined loop variables, and
     the value will not change any more."""
     for i in range(10):
-        print(i)
+        print i
     return lambda: i  # [undefined-loop-variable]
 
 
@@ -55,7 +54,7 @@ def good_case7():
 def good_case8():
     """Lambda defined and called in loop."""
     for i in range(10):
-        print((lambda x: i + x)(1))
+        print (lambda x: i + x)(1)
 
 
 def good_case9():
@@ -73,7 +72,7 @@ def bad_case():
     """Closing over a loop variable."""
     lst = []
     for i in range(10):
-        print(i)
+        print i
         lst.append(lambda: i)  # [cell-var-from-loop]
 
 
@@ -125,6 +124,6 @@ def bad_case6():
     """Closing over variable defined in loop."""
     lst = []
     for i, j in zip(range(10), range(10, 20)):
-        print(j)
+        print j
         lst.append(lambda: i)  # [cell-var-from-loop]
     return lst

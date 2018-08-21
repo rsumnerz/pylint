@@ -1,17 +1,5 @@
-# -*- coding: utf-8 -*-
-# Copyright (c) 2014-2017 Claudiu Popa <pcmanticore@gmail.com>
-# Copyright (c) 2014 Google, Inc.
-# Copyright (c) 2014 Michal Nowikowski <godfryd@gmail.com>
-# Copyright (c) 2014 LOGILAB S.A. (Paris, FRANCE) <contact@logilab.fr>
-# Copyright (c) 2015 Ionel Cristian Maries <contact@ionelmc.ro>
-# Copyright (c) 2016 Łukasz Rogalski <rogalski.91@gmail.com>
-# Copyright (c) 2016 Derek Gustafson <degustaf@gmail.com>
-# Copyright (c) 2018 Ville Skyttä <ville.skytta@upcloud.com>
-
-# Licensed under the GPL: https://www.gnu.org/licenses/old-licenses/gpl-2.0.html
-# For details: https://github.com/PyCQA/pylint/blob/master/COPYING
-
 """Functional full-module tests for PyLint."""
+from __future__ import unicode_literals
 import csv
 import collections
 import io
@@ -20,16 +8,16 @@ import os
 import re
 import sys
 import platform
+import unittest
 
 import six
 from six.moves import configparser
-
-import pytest
 
 from pylint import checkers
 from pylint import interfaces
 from pylint import lint
 from pylint import reporters
+from pylint import utils
 
 class test_dialect(csv.excel):
     if sys.version_info[0] < 3:
@@ -81,7 +69,7 @@ class OutputLine(collections.namedtuple('OutputLine',
 _MESSAGE = {'msg': r'[a-z][a-z\-]+'}
 # Matches a #,
 #  - followed by a comparison operator and a Python version (optional),
-#  - followed by a line number with a +/- (optional),
+#  - followed by an line number with a +/- (optional),
 #  - followed by a list of bracketed message symbols.
 # Used to extract expected messages from testdata files.
 _EXPECTED_RE = re.compile(
@@ -94,18 +82,18 @@ def parse_python_version(str):
     return tuple(int(digit) for digit in str.split('.'))
 
 
-class FunctionalTestReporter(reporters.BaseReporter):
+class TestReporter(reporters.BaseReporter):
     def handle_message(self, msg):
         self.messages.append(msg)
 
     def on_set_current_module(self, module, filepath):
         self.messages = []
 
-    def display_reports(self, layout):
+    def display_results(self, layout):
         """Ignore layouts."""
 
 
-class FunctionalTestFile(object):
+class TestFile(object):
     """A single functional test case file with options."""
 
     _CONVERTERS = {
@@ -226,26 +214,28 @@ def multiset_difference(left_op, right_op):
     return missing, unexpected
 
 
-class LintModuleTest(object):
+class LintModuleTest(unittest.TestCase):
     maxDiff = None
 
     def __init__(self, test_file):
-        test_reporter = FunctionalTestReporter()
+        super(LintModuleTest, self).__init__('_runTest')
+        test_reporter = TestReporter()
         self._linter = lint.PyLinter()
         self._linter.set_reporter(test_reporter)
         self._linter.config.persistent = 0
         checkers.initialize(self._linter)
         self._linter.disable('I')
         try:
-            self._linter.read_config_file(test_file.option_file)
-            self._linter.load_config_file()
+            self._linter.load_file_configuration(test_file.option_file)
         except NoFileError:
             pass
         self._test_file = test_file
 
     def setUp(self):
-        if self._should_be_skipped_due_to_version():
-            pytest.skip( 'Test cannot run with Python %s.' % (sys.version.split(' ')[0],))
+        if (sys.version_info < self._test_file.options['min_pyver']
+                or sys.version_info >= self._test_file.options['max_pyver']):
+            self.skipTest(
+                'Test cannot run with Python %s.' % (sys.version.split(' ')[0],))
         missing = []
         for req in self._test_file.options['requires']:
             try:
@@ -253,21 +243,17 @@ class LintModuleTest(object):
             except ImportError:
                 missing.append(req)
         if missing:
-            pytest.skip('Requires %s to be present.' % (','.join(missing),))
+            self.skipTest('Requires %s to be present.' % (','.join(missing),))
         if self._test_file.options['except_implementations']:
             implementations = [
-                item.strip() for item in
+                item.strip for item in
                 self._test_file.options['except_implementations'].split(",")
             ]
             implementation = platform.python_implementation()
-            if implementation in implementations:
-                pytest.skip(
+            if implementation not in implementations:
+                self.skipTest(
                     'Test cannot run with Python implementation %r'
-                    % (implementation, ))
-
-    def _should_be_skipped_due_to_version(self):
-        return (sys.version_info < self._test_file.options['min_pyver'] or
-                sys.version_info > self._test_file.options['max_pyver'])
+                     % (implementation, ))
 
     def __str__(self):
         return "%s (%s.%s)" % (self._test_file.base, self.__class__.__module__,
@@ -319,7 +305,7 @@ class LintModuleTest(object):
             if unexpected:
                 msg.append('\nUnexpected in testdata:')
                 msg.extend(' %3d: %s' % msg for msg in sorted(unexpected))
-            pytest.fail('\n'.join(msg))
+            self.fail('\n'.join(msg))
         self._check_output_text(expected_messages, expected_text, received_text)
 
     def _split_lines(self, expected_messages, lines):
@@ -333,8 +319,9 @@ class LintModuleTest(object):
 
     def _check_output_text(self, expected_messages, expected_lines,
                            received_lines):
-        assert self._split_lines(expected_messages, expected_lines)[0] == \
-            received_lines, self._test_file.base
+        self.assertSequenceEqual(
+            self._split_lines(expected_messages, expected_lines)[0],
+            received_lines)
 
 
 class LintModuleOutputUpdate(LintModuleTest):
@@ -357,29 +344,26 @@ class LintModuleOutputUpdate(LintModuleTest):
                 for line in remaining:
                     writer.writerow(line.to_csv())
 
-def get_tests():
+def suite():
     input_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)),
                              'functional')
-    suite = []
+    suite = unittest.TestSuite()
     for fname in os.listdir(input_dir):
         if fname != '__init__.py' and fname.endswith('.py'):
-            suite.append(FunctionalTestFile(input_dir, fname))
+            test_file = TestFile(input_dir, fname)
+            if UPDATE:
+                suite.addTest(LintModuleOutputUpdate(test_file))
+            else:
+                suite.addTest(LintModuleTest(test_file))
     return suite
 
 
-TESTS = get_tests()
-TESTS_NAMES = [t.base for t in TESTS]
+def load_tests(loader, tests, pattern):
+    return suite()
 
 
-@pytest.mark.parametrize("test_file", TESTS, ids=TESTS_NAMES)
-def test_functional(test_file):
-    LintTest = LintModuleOutputUpdate(test_file) if UPDATE else LintModuleTest(test_file)
-    LintTest.setUp()
-    LintTest._runTest()
-
-
-if __name__ == '__main__':
+if __name__=='__main__':
     if '-u' in sys.argv:
         UPDATE = True
         sys.argv.remove('-u')
-    pytest.main(sys.argv)
+    unittest.main(defaultTest='suite')

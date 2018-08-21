@@ -1,6 +1,6 @@
-# pylint: disable=R0201, useless-object-inheritance, unnecessary-pass
+# pylint: disable=R0201,print-statement
 # -1: [missing-docstring]
-from __future__ import print_function
+__revision__ = ''
 
 # +1: [empty-docstring]
 def function0():
@@ -9,15 +9,15 @@ def function0():
 # +1: [missing-docstring]
 def function1(value):
     # missing docstring
-    print(value)
+    print value
 
 def function2(value):
     """docstring"""
-    print(value)
+    print value
 
 def function3(value):
     """docstring"""
-    print(value)
+    print value
 
 # +1: [missing-docstring]
 class AAAA(object):
@@ -81,10 +81,3 @@ def function5():
 
 def function6():
     """ I am a {} docstring.""".format("good")
-
-def function7():
-    """docstring"""
-    def inner():
-        # Not documented
-        return 42
-    return inner()

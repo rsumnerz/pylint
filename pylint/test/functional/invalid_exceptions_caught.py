@@ -1,8 +1,6 @@
-# pylint: disable=missing-docstring, too-few-public-methods, useless-object-inheritance
-# pylint: disable=too-many-ancestors, no-absolute-import, import-error, multiple-imports,wrong-import-position
-from __future__ import print_function
-
-import socket, binascii, abc, six
+"""Test for catching non-exceptions."""
+# pylint: disable=too-many-ancestors, print-statement, no-absolute-import, import-error
+import socket
 
 class MyException(object):
     """Custom 'exception'."""
@@ -25,52 +23,52 @@ class SecondSkipException(SkipException):
 try:
     1 + 1
 except MyException:  # [catching-non-exception]
-    print("caught")
+    print "caught"
 
 try:
     1 + 2
 # +1:[catching-non-exception,catching-non-exception]
 except (MyException, MySecondException):
-    print("caught")
+    print "caught"
 
 try:
     1 + 3
 except MyGoodException:
-    print("caught")
+    print "caught"
 
 try:
     1 + 3
 except (MyGoodException, MySecondGoodException):
-    print("caught")
+    print "caught"
 
 try:
     1 + 3
 except (SkipException, SecondSkipException):
-    print("caught")
+    print "caught"
 
 try:
     1 + 42
 # +1:[catching-non-exception,catching-non-exception]
 except (None, list()):
-    print("caught")
+    print "caught"
 
 try:
     1 + 24
 except None: # [catching-non-exception]
-    print("caught")
+    print "caught"
 
 EXCEPTION = None
 EXCEPTION = ZeroDivisionError
 try:
     1 + 46
 except EXCEPTION:
-    print("caught")
+    print "caught"
 
 try:
     1 + 42
 # +1:[catching-non-exception,catching-non-exception,catching-non-exception]
 except (list([4, 5, 6]), None, ZeroDivisionError, 4):
-    print("caught")
+    print "caught"
 
 EXCEPTION_TUPLE = (ZeroDivisionError, OSError)
 NON_EXCEPTION_TUPLE = (ZeroDivisionError, OSError, 4)
@@ -78,12 +76,12 @@ NON_EXCEPTION_TUPLE = (ZeroDivisionError, OSError, 4)
 try:
     1 + 42
 except EXCEPTION_TUPLE:
-    print("caught")
+    print "caught"
 
 try:
     1 + 42
 except NON_EXCEPTION_TUPLE: # [catching-non-exception]
-    print("caught")
+    print "caught"
 
 from missing_import import UnknownError
 UNKNOWN_COMPONENTS = (ZeroDivisionError, UnknownError)
@@ -91,45 +89,4 @@ UNKNOWN_COMPONENTS = (ZeroDivisionError, UnknownError)
 try:
     1 + 42
 except UNKNOWN_COMPONENTS:
-    print("caught")
-
-try:
-    1 + 42
-except binascii.Error:
-    print('builtin and detected')
-
-try:
-    1 + 45
-except object: # [catching-non-exception]
-    print('caught')
-
-try:
-    1 + 42
-except range: # [catching-non-exception]
-    print('caught')
-
-
-class HasErrorInMRO(six.with_metaclass(abc.ABCMeta, Exception)):
-    pass
-
-
-class Second(HasErrorInMRO):
-    pass
-
-
-try:
-    raise Second
-except Second:
-    pass
-
-
-class SomeBase(UnknownError):
-    pass
-
-
-EXCEPTIONS = (SomeBase, ValueError)
-
-try:
-    raise ValueError
-except EXCEPTIONS:
-    pass
+    print "caught"

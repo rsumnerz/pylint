@@ -1,6 +1,6 @@
-# pylint: disable=missing-docstring, multiple-statements, useless-object-inheritance
-# pylint: disable=too-few-public-methods, no-init, no-self-use,bare-except,broad-except, import-error
-from __future__ import print_function
+"""Test warnings about access to undefined variables."""
+# pylint: disable=too-few-public-methods, no-init, no-self-use, old-style-class,print-statement
+
 DEFINED = 1
 
 if DEFINED != 1:
@@ -21,9 +21,9 @@ OTHER += '$'
 
 def bad_default(var, default=unknown2):  # [undefined-variable]
     """function with defaut arg's value set to an unexistant name"""
-    print(var, default)
-    print(xxxx)  # [undefined-variable]
-    augvar += 1  # [undefined-variable]
+    print var, default
+    print xxxx  # [undefined-variable]
+    augvar += 1  # [undefined-variable,unused-variable]
     del vardel  # [undefined-variable]
 
 LMBD = lambda x, y=doesnotexist: x+y  # [undefined-variable]
@@ -35,7 +35,7 @@ except NameError:
     POUET = 'something'
 
 try:
-    POUETT # [used-before-assignment]
+    POUETT # don't catch me
 except Exception: # pylint:disable = broad-except
     POUETT = 'something'
 
@@ -44,7 +44,7 @@ try:
 except: # pylint:disable = bare-except
     POUETTT = 'something'
 
-print(POUET, POUETT, POUETTT)
+print POUET, POUETT, POUETTT
 
 
 try:
@@ -52,7 +52,7 @@ try:
 except ValueError:
     PLOUF = 'something'
 
-print(PLOUF)
+print PLOUF
 
 def if_branch_test(something):
     """hop"""
@@ -60,7 +60,7 @@ def if_branch_test(something):
         if xxx == 1:  # [used-before-assignment]
             pass
     else:
-        print(xxx)
+        print xxx
         xxx = 3
 
 
@@ -126,122 +126,3 @@ class Ancestor(object):
 
 class Ancestor1(object):
     """ No op """
-
-NANA = BAT # [undefined-variable]
-del BAT
-
-
-class KeywordArgument(object):
-    """Test keyword arguments."""
-
-    enable = True
-    def test(self, is_enabled=enable):
-        """do nothing."""
-
-    def test1(self, is_enabled=enabled): # [used-before-assignment]
-        """enabled is undefined at this point, but it is used before assignment."""
-
-    def test2(self, is_disabled=disabled): # [undefined-variable]
-        """disabled is undefined"""
-
-    enabled = True
-
-    func = lambda arg=arg: arg * arg # [undefined-variable]
-
-    arg2 = 0
-    func2 = lambda arg2=arg2: arg2 * arg2
-
-# Don't emit if the code is protected by NameError
-try:
-    unicode_1
-except NameError:
-    pass
-
-try:
-    unicode_2 # [undefined-variable]
-except Exception:
-    pass
-
-try:
-    unicode_3
-except:
-    pass
-
-try:
-    unicode_4 # [undefined-variable]
-except ValueError:
-    pass
-
-# See https://bitbucket.org/logilab/pylint/issue/111/
-try: raise IOError(1, "a")
-except IOError as err: print(err)
-
-
-def test_conditional_comprehension():
-    methods = ['a', 'b', '_c', '_d']
-    my_methods = sum(1 for method in methods
-                     if not method.startswith('_'))
-    return my_methods
-
-
-class MyError(object):
-    pass
-
-
-class MyClass(object):
-    class MyError(MyError):
-        pass
-
-
-def dec(inp):
-    def inner(func):
-        print(inp)
-        return func
-    return inner
-
-# Make sure lambdas with expressions
-# referencing parent class do not raise undefined variable
-# because at the time of their calling, the class name will
-# be populated
-# See https://github.com/PyCQA/pylint/issues/704
-class LambdaClass:
-    myattr = 1
-    mylambda = lambda: LambdaClass.myattr
-
-# Need different classes to make sure
-# consumed variables don't get in the way
-class LambdaClass2:
-    myattr = 1
-    # Different base_scope scope but still applies
-    mylambda2 = lambda: [LambdaClass2.myattr for _ in [1, 2]]
-
-class LambdaClass3:
-    myattr = 1
-    # Nested default argument in lambda
-    # Should not raise error
-    mylambda3 = lambda: lambda a=LambdaClass3: a
-
-class LambdaClass4:
-    myattr = 1
-    mylambda4 = lambda a=LambdaClass4: lambda: a # [undefined-variable]
-
-# Make sure the first lambda does not consume the LambdaClass5 class
-# name although the expression is is valid
-# Consuming the class would cause the subsequent undefined-variable to be masked
-class LambdaClass5:
-    myattr = 1
-    mylambda = lambda: LambdaClass5.myattr
-    mylambda4 = lambda a=LambdaClass5: lambda: a # [undefined-variable]
-
-
-def nonlocal_in_ifexp():
-    import matplotlib.pyplot as plt
-    def onclick(event):
-        if event:
-            nonlocal i
-            i += 1
-            print(i)
-    i = 0
-    fig = plt.figure()
-    fig.canvas.mpl_connect('button_press_event', onclick)
-    plt.show(block=True)

@@ -1,5 +1,4 @@
 """Test for W0623, overwriting names in exception handlers."""
-# pylint: disable=unnecessary-pass
 
 __revision__ = ''
 
@@ -13,5 +12,5 @@ def some_function():
 
     try:
         {}["a"]
-    except KeyError as some_function: # W0623
+    except KeyError, some_function: # W0623
         pass

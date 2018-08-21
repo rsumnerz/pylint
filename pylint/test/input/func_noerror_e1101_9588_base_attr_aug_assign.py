@@ -1,4 +1,4 @@
-# pylint: disable=R0903, useless-object-inheritance
+# pylint: disable=R0903
 """
 False positive case of E1101:
 
@@ -36,3 +36,4 @@ class NegativeClass(BaseClass):
     def countup(self):
         "No problem."
         self.e1101 += 1
+
