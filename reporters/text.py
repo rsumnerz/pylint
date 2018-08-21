@@ -1,3 +1,5 @@
+# Copyright (c) 2003-2007 Sylvain Thenault (thenault@gmail.com).
+# Copyright (c) 2003-2007 LOGILAB S.A. (Paris, FRANCE).
 # This program is free software; you can redistribute it and/or modify it under
 # the terms of the GNU General Public License as published by the Free Software
 # Foundation; either version 2 of the License, or (at your option) any later
@@ -10,13 +12,15 @@
 # You should have received a copy of the GNU General Public License along with
 # this program; if not, write to the Free Software Foundation, Inc.,
 # 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
-""" Copyright (c) 2000-2003 LOGILAB S.A. (Paris, FRANCE).
- http://www.logilab.fr/ -- mailto:contact@logilab.fr
+"""Plain text reporters:
 
-Plain text reporter
+:text: the default one grouping messages by module
+:parseable:
+  standard parseable output with full module path on each message (for
+  editor integration) 
+:colorized: an ANSI colorized text reporter
+
 """
-
-__revision__ = "$Id: text.py,v 1.21 2005-12-28 00:24:35 syt Exp $"
 
 import os
 import sys
@@ -28,12 +32,6 @@ from pylint.interfaces import IReporter
 from pylint.reporters import BaseReporter
 
 TITLE_UNDERLINES = ['', '=', '-', '.']
-
-
-## def modname_to_path(modname, prefix=os.getcwd() + os.sep):
-##     """transform a module name into a path"""
-##     module = load_module_from_name(modname).__file__.replace(prefix, '')
-##     return module.replace('.pyc', '.py').replace('.pyo', '.py')
 
 
 class TextReporter(BaseReporter):
@@ -51,8 +49,11 @@ class TextReporter(BaseReporter):
         """manage message of different type and in the context of path"""
         module, obj, line = location[1:]
         if not self._modules.has_key(module):
-            self.writeln('************* Module %s' % module)
-            self._modules[module] = 1
+            if module:
+                self.writeln('************* Module %s' % module)
+                self._modules[module] = 1
+            else:
+                self.writeln('************* %s' % module)
         if obj:
             obj = ':%s' % obj
         if self.include_ids:
@@ -67,12 +68,14 @@ class TextReporter(BaseReporter):
         TextWriter().format(layout, self.out)
 
 
-class TextReporter2(TextReporter):
+class ParseableTextReporter(TextReporter):
     """a reporter very similar to TextReporter, but display messages in a form
     recognized by most text editors :
     
     <filename>:<linenum>:<msg>
     """
+    line_format = '%(path)s:%(line)s: [%(sigle)s%(obj)s] %(msg)s'
+    
     def __init__(self, output=sys.stdout, relative=True):
         TextReporter.__init__(self, output)
         if relative:
@@ -91,14 +94,12 @@ class TextReporter2(TextReporter):
             sigle = msg_id[0]
         if self._prefix:
             path = path.replace(self._prefix, '')
-##         try:
-##             modpath = self._modules[module]
-##         except KeyError:
-##             modpath = self._modules[module] = self.linter.current_file or \
-##                       modname_to_path(module)
-        self.writeln('%s:%s: [%s%s] %s' % (path, line, sigle, obj, msg))
+        self.writeln(self.line_format % locals())
     
-
+class VSTextReporter(ParseableTextReporter):
+    """Visual studio text reporter"""
+    line_format = '%(path)s(%(line)s): [%(sigle)s%(obj)s] %(msg)s'
+    
 class ColorizedTextReporter(TextReporter):
     """Simple TextReporter that colorizes text output"""
 
@@ -123,7 +124,7 @@ class ColorizedTextReporter(TextReporter):
         in self.color_mapping
         """
         try:
-            return self.color_mapping[msg_id]
+            return self.color_mapping[msg_id[0]]
         except KeyError:
             return None, None
 
@@ -134,8 +135,12 @@ class ColorizedTextReporter(TextReporter):
         module, obj, line = location[1:]
         if not self._modules.has_key(module):
             color, style = self._get_decoration('S')
-            modsep = colorize_ansi('************* Module %s' % module,
-                                   color, style)
+            if module:
+                modsep = colorize_ansi('************* Module %s' % module,
+                                       color, style)
+            else:
+                modsep = colorize_ansi('************* %s' % module,
+                                       color, style)
             self.writeln(modsep)
             self._modules[module] = 1
         if obj:

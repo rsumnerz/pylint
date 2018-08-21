@@ -1,3 +1,5 @@
+# Copyright (c) 2003-2007 LOGILAB S.A. (Paris, FRANCE).
+# http://www.logilab.fr/ -- mailto:contact@logilab.fr
 # This program is free software; you can redistribute it and/or modify it under
 # the terms of the GNU General Public License as published by the Free Software
 # Foundation; either version 2 of the License, or (at your option) any later
@@ -10,20 +12,15 @@
 # You should have received a copy of the GNU General Public License along with
 # this program; if not, write to the Free Software Foundation, Inc.,
 # 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
-""" Copyright (c) 2003-2005 LOGILAB S.A. (Paris, FRANCE).
- http://www.logilab.fr/ -- mailto:contact@logilab.fr
-
-exceptions checkers for Python code
+"""exceptions handling (raising, catching, exceptions classes) checker
 """
-
-__revision__ = '$Id: exceptions.py,v 1.27 2006-03-08 15:53:42 syt Exp $'
 
 from logilab.common.compat import enumerate
 from logilab import astng
 from logilab.astng.inference import unpack_infer
 
 from pylint.checkers import BaseChecker
-from pylint.checkers.utils import is_empty
+from pylint.checkers.utils import is_empty, is_raising
 from pylint.interfaces import IASTNGChecker
 
 MSGS = {
@@ -38,11 +35,11 @@ MSGS = {
     
     'W0701': ('Raising a string exception',
               'Used when a string exception is raised.'),
-    'W0702': ('No exception\'s type specified',
+    'W0702': ('No exception type(s) specified',
               'Used when an except clause doesn\'t specify exceptions type to \
               catch.'),
     'W0703': ('Catch "Exception"',
-              'Used when an except catch Exception instances.'),
+              'Used when an except catches Exception instances.'),
     'W0704': ('Except doesn\'t do anything',
               'Used when an except clause does nothing but "pass" and there is\
               no "else" clause.'),
@@ -51,14 +48,6 @@ MSGS = {
     'Used when a variable used to raise an exception is initially \
     assigned to a value which can\'t be used as an exception.'),
     }
-
-def is_raising(stmt):
-    """return true if the given statement node raise an exception
-    """
-    for node in stmt.nodes:
-        if isinstance(node, astng.Raise):
-            return 1
-    return 0
     
 class ExceptionsChecker(BaseChecker):
     """checks for                                                              
@@ -97,14 +86,13 @@ class ExceptionsChecker(BaseChecker):
                 value = unpack_infer(expr).next()
             except astng.InferenceError:
                 return
-            if value is astng.YES:
-                return
-            # must to be carefull since Const, Dict, .. inherit from
-            # Instance now
-            if isinstance(value, (astng.Class, astng.Module)):
-                return
-            if isinstance(value, astng.Instance) and \
-               isinstance(value._proxied, astng.Class):
+            # have to be careful since Const, Dict, .. inherit from
+            # Instance now and get the original astng class as _proxied
+            if (value is astng.YES or
+                isinstance(value, (astng.Class, astng.Module)) or
+                (isinstance(value, astng.Instance) and 
+                 isinstance(value._proxied, astng.Class) and
+                 value._proxied.root().name != '__builtin__')):
                 return
             if isinstance(value, astng.Const) and \
                (value.value is None or 
@@ -130,7 +118,7 @@ class ExceptionsChecker(BaseChecker):
             stmt = handler[2]
             # single except doing nothing but "pass" without else clause
             if nb_handlers == 1 and is_empty(stmt) and not node.else_:
-                self.add_message('W0704', node=exc_type)
+                self.add_message('W0704', node=exc_type or stmt)
             if exc_type is None:
                 if nb_handlers == 1 and not is_raising(stmt):
                     self.add_message('W0702', node=stmt.nodes[0])
@@ -145,10 +133,9 @@ class ExceptionsChecker(BaseChecker):
                 except astng.InferenceError:
                     continue
                 for exc in excs:
-                    if exc is astng.YES:
+                    # XXX skip other non class nodes 
+                    if exc is astng.YES or not isinstance(exc, astng.Class):
                         continue
-                    if not isinstance(exc, astng.Class):
-                        continue # XXX
                     exc_ancestors = [anc for anc in exc.ancestors()
                                      if isinstance(anc, astng.Class)]
                     for previous_exc in exceptions_classes:

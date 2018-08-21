@@ -1,4 +1,4 @@
-# Copyright (c) 2003-2006 LOGILAB S.A. (Paris, FRANCE).
+# Copyright (c) 2003-2007 LOGILAB S.A. (Paris, FRANCE).
 # http://www.logilab.fr/ -- mailto:contact@logilab.fr
 #
 # This program is free software; you can redistribute it and/or modify it under
@@ -15,8 +15,6 @@
 # 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 """variables checkers for Python code
 """
-
-__revision__ = "$Id: variables.py,v 1.69 2006-04-19 09:17:40 syt Exp $"
 
 from copy import copy
 
@@ -61,6 +59,9 @@ MSGS = {
               'Used when a variable is defined but not used.'),
     'W0613': ('Unused argument %r',
               'Used when a function or method argument is not used.'),
+    'W0614': ('Unused import %s from wildcard import',
+              'Used when an imported module or variable is not used from a \
+              \'from X import *\' style import.'),
     
     'W0621': ('Redefining name %r from outer scope (line %s)',
               'Used when a variable\'s name hide a name defined in the outer \
@@ -134,9 +135,13 @@ builtins. Remember that you should avoid to define new builtins when possible.'
             return
         for name, stmts in not_consumed.items():
             stmt = stmts[0]
-            if isinstance(stmt, astng.Import) or (
-                isinstance(stmt, astng.From) and stmt.modname != '__future__'):
+            if isinstance(stmt, astng.Import):
                 self.add_message('W0611', args=name, node=stmt)
+            elif isinstance(stmt, astng.From) and stmt.modname != '__future__':
+                if stmt.names[0][0] == '*':
+                    self.add_message('W0614', args=name, node=stmt)
+                else:
+                    self.add_message('W0611', args=name, node=stmt)
         del self._to_consume
         del self._vars
 
@@ -158,6 +163,17 @@ builtins. Remember that you should avoid to define new builtins when possible.'
             
     def leave_lambda(self, _):
         """leave lambda: update consumption analysis variable
+        """
+        # do not check for not used locals here
+        self._to_consume.pop()
+
+    def visit_genexpr(self, node):
+        """visit genexpr: update consumption analysis variable
+        """
+        self._to_consume.append((copy(node.locals), {}, 'genexpr'))
+            
+    def leave_genexpr(self, _):
+        """leave genexpr: update consumption analysis variable
         """
         # do not check for not used locals here
         self._to_consume.pop()
@@ -272,7 +288,7 @@ builtins. Remember that you should avoid to define new builtins when possible.'
         """
         name = node.name
         stmt = node.statement()
-        frame = stmt.frame()
+        frame = stmt.scope()
         # if the name node is used as a function default argument's value, then
         # start from the parent frame of the function instead of the function
         # frame
@@ -338,12 +354,12 @@ builtins. Remember that you should avoid to define new builtins when possible.'
     def visit_import(self, node):
         """check modules attribute accesses"""
         for name, _ in node.names:
-            name_parts = name.split('.')
+            parts = name.split('.')
             try:
-                module = node.infer(name_parts[0], asname=False).next()
+                module = node.infer_name_module(parts[0]).next()
             except astng.ResolveError:
                 continue
-            self._check_module_attrs(node, module, name_parts[1:])
+            self._check_module_attrs(node, module, parts[1:])
                                     
     def visit_from(self, node):
         """check modules attribute accesses"""

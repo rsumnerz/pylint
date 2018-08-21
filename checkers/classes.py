@@ -1,4 +1,4 @@
-# Copyright (c) 2003-2006 LOGILAB S.A. (Paris, FRANCE).
+# Copyright (c) 2003-2007 LOGILAB S.A. (Paris, FRANCE).
 # http://www.logilab.fr/ -- mailto:contact@logilab.fr
 #
 # This program is free software; you can redistribute it and/or modify it under
@@ -17,8 +17,7 @@
 """
 from __future__ import generators
 
-__revision__ = "$Id: classes.py,v 1.77 2006-03-05 14:39:37 syt Exp $"
-
+from logilab.common.compat import set
 from logilab import astng
 
 from pylint.interfaces import IASTNGChecker
@@ -26,25 +25,11 @@ from pylint.checkers import BaseChecker
 from pylint.checkers.utils import overrides_a_method
 
 MSGS = {
-##     'F0201': ('Unable to check method %r of interface %s',
-##               'Used when PyLint has been unable to fetch a
-    ##method declared in \
-##               an interface (either in the class or in the
-    ##interface) and so to\
-##               check its implementation.'),
     'F0202': ('Unable to check methods signature (%s / %s)',
               'Used when PyLint has been unable to check methods signature \
               compatibility for an unexpected raison. Please report this kind \
               if you don\'t make sense of it.'),
-##     'F0203': ('Unable to resolve %s',
-##               'Used when PyLint has been unable to resolve a name.'),
-##     'F0204': ('Name %s has not been resolved to a class as expected',
-##               'Used when PyLint try to resolve an ancestor class name but \
-##               gets something else than a Class node.'),
 
-##     'E0201': ('Access to undefined member %r',
-##               'Used when an instance member not defined in the instance, its\
-##               class or its ancestors is accessed.'),
     'E0202': ('An attribute inherited from %s hide this method',
               'Used when a class defines a method which is hiden by an \
               instance attribute from an ancestor class.'),
@@ -55,12 +40,18 @@ MSGS = {
               'Used when an instance attribute is defined outside the __init__\
               method.'),
     
+    'W0212': ('Access to a protected member %s of a client class', # E0214
+              'Used when a protected member (i.e. class member with a name \
+              beginning with an underscore) is access outside the class or a \
+              descendant of the class where it\'s defined.'),
+    
     'E0211': ('Method has no argument',
               'Used when a method which should have the bound instance as \
               first argument has no argument defined.'),
     'E0213': ('Method should have "self" as first argument',
               'Used when a method has an attribute different the "self" as\
-              first argument.'),
+              first argument. This is considered as an error since this is\
+              a soooo common convention that you should\'nt break it!'),
     'C0202': ('Class method should have "cls" as first argument', # E0212
               'Used when a class method has an attribute different than "cls"\
               as first argument, to easily differentiate them from regular \
@@ -68,6 +59,7 @@ MSGS = {
     'C0203': ('Metaclass method should have "mcs" as first argument', # E0214
               'Used when a metaclass method has an attribute different the \
               "mcs" as first argument.'),
+    
     'W0211': ('Static method with %r as first argument',
               'Used when a static method has "self" or "cls" as first argument.'
               ),
@@ -84,13 +76,13 @@ MSGS = {
               class implementing this interface'),
     'W0221': ('Arguments number differs from %s method',
               'Used when a method has a different number of arguments than in \
-              the implemented interface or in an overriden method.'),
+              the implemented interface or in an overridden method.'),
     'W0222': ('Signature differs from %s method',
               'Used when a method signature is different than in the \
-              implemented interface or in an overriden method.'),
-    'W0223': ('Method %r is abstract in class %r but is not overriden',
+              implemented interface or in an overridden method.'),
+    'W0223': ('Method %r is abstract in class %r but is not overridden',
               'Used when an abstract method (ie raise NotImplementedError) is \
-              not overriden in concrete class.'
+              not overridden in concrete class.'
               ),
     'F0220': ('failed to resolve interfaces implemented by %s (%s)', # W0224
               'Used when a PyLint as failed to find interfaces implemented by \
@@ -113,7 +105,7 @@ MSGS = {
 class ClassChecker(BaseChecker):
     """checks for :                                                            
     * methods without self as first argument                                   
-    * overriden methods signature                                              
+    * overridden methods signature                                              
     * access only to existant members via self                                 
     * attributes not defined in the __init__ method                            
     * supported interfaces implementation                                      
@@ -215,11 +207,13 @@ instance attributes.'}
         if node.name == '__init__':
             self._check_init(node)
             return
+        if not isinstance(klass, astng.Class):
+            return
         # check signature if the method overrload an herited method
-        for overriden in klass.local_attr_ancestors(node.name):
+        for overridden in klass.local_attr_ancestors(node.name):
             # get astng for the searched method
             try:
-                meth_node = overriden[node.name]
+                meth_node = overridden[node.name]
             except KeyError:
                 # we have found the method but it's not in the local
                 # dictionnary.
@@ -227,22 +221,31 @@ instance attributes.'}
                 continue
             if not isinstance(meth_node, astng.Function):
                 continue
-            self._check_signature(node, meth_node, 'overriden')
+            self._check_signature(node, meth_node, 'overridden')
             break
         # check if the method overload an attribute
         try:
-            overriden = klass.instance_attr(node.name)[0] # XXX
-            while not isinstance(overriden, astng.Class):
-                overriden = overriden.parent.frame()
-            self.add_message('E0202', args=overriden.name, node=node)
+            overridden = klass.instance_attr(node.name)[0] # XXX
+            # we may be unable to get owner class if this is a monkey
+            # patched method
+            while overridden.parent and not isinstance(overridden, astng.Class):
+                overridden = overridden.parent.frame()
+            self.add_message('E0202', args=overridden.name, node=node)
         except astng.NotFoundError:
             pass
-                
+        
+    pymethods = set(('__new__', '__init__',
+                     '__getattr__', '__setattr__',
+                     '__hash__', '__cmp__',
+                     '__mul__', '__div__', '__add__', '__sub__',
+                     '__rmul__', '__rdiv__', '__radd__', '__rsub__',
+                     # To be continued
+                     ))
     def leave_function(self, node):
         """on method node, check if this method couldn't be a function
         
         ignore class, static and abstract methods, initializer,
-        methods overriden from a parent class and any
+        methods overridden from a parent class and any
         kind of method defined in an interface for this warning
         """
         if node.is_method():
@@ -250,20 +253,43 @@ instance attributes.'}
                 self._first_attrs.pop()
             class_node = node.parent.frame()
             if (self._meth_could_be_func and node.type == 'method'
-                and node.name != '__init__'
+                and not node.name in self.pymethods
                 and not (node.is_abstract() or
                          overrides_a_method(class_node, node.name))
                 and class_node.type != 'interface'):
                 self.add_message('R0201', node=node)
                 
     def visit_getattr(self, node):
-        """check if the name handle an access to a class member
-        if so, register it
+        """check if the getattr is an access to a class member
+        if so, register it. Also check for access to protected
+        class member from outside its class (but ignore __special__
+        methods)
         """
+        attrname = node.attrname
         if self._first_attrs and isinstance(node.expr, astng.Name) and \
                node.expr.name == self._first_attrs[-1]:                
-            self._accessed[-1].setdefault(node.attrname, []).append(node)
-                
+            self._accessed[-1].setdefault(attrname, []).append(node)
+        elif attrname[0] == '_' and not attrname == '_' and not (
+             attrname.startswith('__') and attrname.endswith('__')):
+            # XXX move this in a reusable function
+            klass = node.frame()
+            while klass is not None and not isinstance(klass, astng.Class):
+                if klass.parent is None:
+                    klass = None
+                else:
+                    klass = klass.parent.frame()
+            # XXX infer to be more safe and less dirty ??
+            # in classes, check we are not getting a parent method
+            # through the class object or through super
+            callee = node.expr.as_string()
+            if klass is None or not (callee == klass.name or
+                callee in klass.basenames
+                or (isinstance(node.expr, astng.CallFunc)
+                    and isinstance(node.expr.node, astng.Name) 
+                    and node.expr.node.name == 'super')):
+                self.add_message('W0212', node=node, args=attrname)
+            
+            
     def visit_name(self, node):
         """check if the name handle an access to a class member
         if so, register it
@@ -276,6 +302,8 @@ instance attributes.'}
         """check that accessed members are defined"""
         # XXX refactor, probably much simpler now that E0201 is in type checker
         for attr, nodes in accessed.items():
+            # deactivate "except doesn't do anything", that's expected
+            # pylint: disable-msg=W0704
 ##             # is it a builtin attribute ?
 ##             if attr in ('__dict__', '__class__', '__doc__'):
 ##                 # FIXME: old class object doesn't have __class__
@@ -297,9 +325,10 @@ instance attributes.'}
             # is it an instance attribute ?
             try:
                 def_nodes = node.instance_attr(attr) # XXX
-                instance_attribute = True
+                #instance_attribute = True
             except astng.NotFoundError:
-                instance_attribute = False
+                pass
+                #instance_attribute = False
             else:
                 if len(def_nodes) == 1:
                     def_node = def_nodes[0]
@@ -399,7 +428,7 @@ instance attributes.'}
             implements = astng.Instance(node).getattr('__implements__')[0]
             assignment = implements.parent
             assert isinstance(assignment, astng.Assign)
-            # assignment.expr can be a Name or a Tupe or whatever.
+            # assignment.expr can be a Name or a Tuple or whatever.
             # Use as_string() for the message
             # FIXME: in case of multiple interfaces, find which one could not
             #        be resolved
@@ -424,32 +453,34 @@ instance attributes.'}
                 return
             try:
                 klass = expr.expr.infer().next()
+                if klass is astng.YES:
+                    continue
                 try:
                     del to_call[klass]
                 except KeyError:
                     self.add_message('W0233', node=expr, args=klass.name)
-            except astng.InferenceError, ex:
+            except astng.InferenceError:
                 continue
         for klass in to_call.keys():
             if klass.name == 'object':
                 continue
             self.add_message('W0231', args=klass.name, node=node)
 
-    def _check_signature(self, method1, method2, class_type):
+    def _check_signature(self, method1, refmethod, class_type):
         """check that the signature of the two given methods match
         
         class_type is in 'class', 'interface'
         """
         if not (isinstance(method1, astng.Function)
-                and isinstance(method2, astng.Function)):
-            self.add_message('F0202', args=(method1, method2), node=method1)
+                and isinstance(refmethod, astng.Function)):
+            self.add_message('F0202', args=(method1, refmethod), node=method1)
             return
         # don't care about functions with unknown argument (builtins)
-        if method1.argnames is None or method2.argnames is None:
+        if method1.argnames is None or refmethod.argnames is None:
             return
-        if len(method1.argnames) != len(method2.argnames):
+        if len(method1.argnames) != len(refmethod.argnames):
             self.add_message('W0221', args=class_type, node=method1)
-        elif len(method1.defaults) != len(method2.defaults):
+        elif len(method1.defaults) < len(refmethod.defaults):
             self.add_message('W0222', args=class_type, node=method1)
 
                         

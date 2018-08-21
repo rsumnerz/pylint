@@ -1,3 +1,5 @@
+# Copyright (c) 2003-2007 LOGILAB S.A. (Paris, FRANCE).
+# http://www.logilab.fr/ -- mailto:contact@logilab.fr
 # This program is free software; you can redistribute it and/or modify it under
 # the terms of the GNU General Public License as published by the Free Software
 # Foundation; either version 2 of the License, or (at your option) any later
@@ -10,13 +12,8 @@
 # You should have received a copy of the GNU General Public License along with
 # this program; if not, write to the Free Software Foundation, Inc.,
 # 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
-""" Copyright (c) 2003-2006 LOGILAB S.A. (Paris, FRANCE).
- http://www.logilab.fr/ -- mailto:contact@logilab.fr
-
- basic checker for Python code
+"""basic checker for Python code
 """
-
-__revision__ = "$Id: base.py,v 1.65 2006-01-26 00:26:23 syt Exp $"
 
 from logilab import astng
 from logilab.common.ureports import Table
@@ -40,6 +37,7 @@ NO_REQUIRED_DOC_RGX = re.compile('__.*__')
 del re
 
 def in_loop(node):
+    """return True if the node is inside a kind of for loop"""
     parent = node.parent
     while parent is not None:
         if isinstance(parent, (astng.For, astng.ListComp, astng.GenExpr)):
@@ -96,13 +94,27 @@ def report_by_type_stats(sect, stats, old_stats):
 
 
 MSGS = {
+    'E0100': ('__init__ method is a generator',
+              'Used when the special class method __init__ is turned into a '
+              'generator by a yield in its body.'),    
     'E0101': ('Explicit return in __init__',
-              'Used when the special class method __ini__ has an explicit \
+              'Used when the special class method __init__ has an explicit \
               return value.'),    
     'E0102': ('%s already defined line %s',
               'Used when a function / class / method is redefined.'),
     'E0103': ('%r not properly in loop',
               'Used when break or continue keywords are used outside a loop.'),
+
+    'E0104': ('return outside function',
+              'Used when a "return" statement is found outside a function or '
+              'method.'),
+    'E0105': ('yield outside function',
+              'Used when a "yield" statement is found outside a function or '
+              'method.'),
+    'E0106': ('return with argument inside generator',
+              'Used when a "return" statement with an argument is found '
+              'outside in a generator function or method (e.g. with some '
+              '"yield" statements).'),
 
     'W0101': ('Unreachable code',
               'Used when there is some code behind a "return" or "raise" \
@@ -113,20 +125,31 @@ MSGS = {
     'W0104': ('Statement seems to have no effect',
               'Used when a statement doesn\'t have (or at least seems to) \
               any effect.'),
+    'W0105': ('String statement has no effect',
+              'Used when a string is used as a statement (which of course \
+              has no effect). This is a particular case of W0104 with its \
+              own message so you can easily disable it if you\'re using \
+              those strings as documentation, instead of comments.'),
+    'W0106': ('Unnecessary semicolon',
+              'Used when a statement is endend by a semi-colon (";"), which \
+              isn\'t necessary (that\'s python, not C ;).'),
+    'W0107': ('Unnecessary pass statement',
+              'Used when a "pass" statement that can be avoided is '
+              'encountered.)'),
 
     'W0122': ('Use of the exec statement',
               'Used when you use the "exec" statement, to discourage its \
               usage. That doesn\'t mean you can not use it !'),
     
     'W0141': ('Used builtin function %r',
-              'Used when a black listed builtin function is used (see the \
-              bad-function option). Usual black listed functions are the ones \
-              like map, or filter , where Python offers now some cleaner \
-              alternative like list comprehension.'),
+              'Used when a black listed builtin function is used (see the '
+              'bad-function option). Usual black listed functions are the ones '
+              'like map, or filter , where Python offers now some cleaner '
+              'alternative like list comprehension.'),
     'W0142': ('Used * or ** magic',
-              'Used when a function or method is called using `*args` or \
-              `**kwargs` to dispatch arguments. This doesn\'t improve readility\
-               and should be used with care.'),
+              'Used when a function or method is called using `*args` or '
+              '`**kwargs` to dispatch arguments. This doesn\'t improve '
+              'readability and should be used with care.'),
 
     'C0102': ('Black listed name "%s"',
               'Used when the name is listed in the black list (unauthorized \
@@ -141,7 +164,7 @@ MSGS = {
               docstring.'),
     'C0112': ('Empty docstring', # W0132
               'Used when a module, function, class or method has an empty \
-              docstring (it would be to easy ;).'),
+              docstring (it would be too easy ;).'),
 
     'C0121': ('Missing required attribute "%s"', # W0103
               'Used when an attribute required for modules is missing.'),
@@ -166,7 +189,7 @@ functions, methods
     msgs = MSGS
     priority = -1
     options = (('required-attributes',
-                {'default' : ('__revision__',), 'type' : 'csv',
+                {'default' : (), 'type' : 'csv',
                  'metavar' : '<attributes>',
                  'help' : 'Required attributes for module, separated by a '
                           'comma'}
@@ -303,16 +326,40 @@ functions, methods
             self._check_name('attr', attr, anodes[0])
 
     def visit_discard(self, node):
-        """check for statement without effect"""
-        if not isinstance(node.expr, astng.CallFunc):
+        """check for various kind of statements without effect"""
+        expr = node.expr
+        if isinstance(node.expr, astng.Const):
+            # XXX lineno maybe dynamically set incidently
+            if expr.value is None and expr.lineno is None:
+                # const None node with lineno to None are inserted
+                # on unnecessary semi-column
+                # XXX navigate to get a correct lineno
+                brothers = list(node.parent.getChildNodes())
+                previoussibling = brothers[brothers.index(node)-1]
+                self.add_message('W0106', node=previoussibling)
+                return
+            if isinstance(expr.value, basestring):
+                # tread string statement in a separated message
+                self.add_message('W0105', node=node)
+                return
+        # ignore if this is a function call (can't predicate side effects)
+        # or a yield (which are wrapped by a discard node in py >= 2.5)
+        if not isinstance(node.expr, (astng.CallFunc, astng.Yield)):
             self.add_message('W0104', node=node)
+        
+    def visit_pass(self, node):
+        """check is the pass statement is really necessary
+        """
+        # if self._returns is empty, we're outside a function !
+        if len(node.parent.getChildNodes()) > 1:
+            self.add_message('W0107', node=node)
 
     def visit_function(self, node):
         """check function name, docstring, arguments, redefinition,
         variable names, max locals
         """
         is_method = node.is_method()
-        self._returns.append(0)
+        self._returns.append([])
         f_type = is_method and 'method' or 'function'
         self.stats[f_type] += 1
         # function name
@@ -333,10 +380,25 @@ functions, methods
         """most of the work is done here on close:
         checks for max returns, branch, return in __init__
         """
-        nb_returns = self._returns.pop()
-        if node.is_method() and node.name == '__init__' and nb_returns:
-            self.add_message('E0101', node=node)
-
+        returns = self._returns.pop()
+        if node.is_method() and node.name == '__init__':
+            if node.is_generator():
+                self.add_message('E0100', node=node)
+            else:
+                values = [r.value for r in returns]
+                if  [v for v in values if not (
+                    (isinstance(v, astng.Const) and v.value is None)
+                    or  (isinstance(v, astng.Name) and v.name == 'None'))]:
+                    self.add_message('E0101', node=node)
+        elif node.is_generator():
+            # make sure we don't mix non-None returns and yields
+            for retnode in returns:
+                if isinstance(retnode, astng.Return) and \
+                       isinstance(retnode.value, astng.Const) and \
+                       retnode.value.value is not None:
+                    self.add_message('E0106', node=node,
+                                     line=retnode.fromlineno)
+            
     def visit_assname(self, node):
         """check module level assigned names"""
         frame = node.frame()
@@ -355,14 +417,22 @@ functions, methods
         """check is the node has a right sibling (if so, that's some unreachable
         code)
         """
-        self._returns[-1] += 1
+        # if self._returns is empty, we're outside a function !
+        if not self._returns:
+            self.add_message('E0104', node=node)
+            return
+        self._returns[-1].append(node)
         self._check_unreachable(node)
         
-    def visit_yield(self, _):
+    def visit_yield(self, node):
         """check is the node has a right sibling (if so, that's some unreachable
         code)
         """
-        self._returns[-1] += 1
+        # if self._returns is empty, we're outside a function !
+        if not self._returns:
+            self.add_message('E0105', node=node)
+            return
+        self._returns[-1].append(node)
 
     def visit_continue(self, node):
         """check is the node has a right sibling (if so, that's some unreachable

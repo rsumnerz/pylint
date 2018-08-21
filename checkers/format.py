@@ -1,3 +1,5 @@
+# Copyright (c) 2003-2008 Sylvain Thenault (thenault@gmail.com).
+# Copyright (c) 2003-2008 LOGILAB S.A. (Paris, FRANCE).
 # This program is free software; you can redistribute it and/or modify it under
 # the terms of the GNU General Public License as published by the Free Software
 # Foundation; either version 2 of the License, or (at your option) any later
@@ -10,10 +12,7 @@
 # You should have received a copy of the GNU General Public License along with
 # this program; if not, write to the Free Software Foundation, Inc.,
 # 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
-""" Copyright (c) 2003-2005 LOGILAB S.A. (Paris, FRANCE).
- http://www.logilab.fr/ -- mailto:contact@logilab.fr
-
-Python code format's checker.
+"""Python code format's checker.
 
 By default try to follow Guido's style guide :
 
@@ -22,14 +21,13 @@ http://www.python.org/doc/essays/styleguide.html
 Some parts of the process_token method is based from The Tab Nanny std module.
 """
 
-__revision__ = "$Id: format.py,v 1.51 2006-03-14 15:08:10 syt Exp $"
-
 import re
 import tokenize
 if not hasattr(tokenize, 'NL'):
     raise ValueError("tokenize.NL doesn't exist -- tokenize module too old")
 
 from logilab.common.textutils import pretty_match
+from logilab.astng import nodes
 
 from pylint.interfaces import IRawChecker, IASTNGChecker
 from pylint.checkers import BaseRawChecker
@@ -37,27 +35,27 @@ from pylint.checkers import BaseRawChecker
 MSGS = {
     'C0301': ('Line too long (%s/%s)',
               'Used when a line is longer than a given number of characters.'),
-    'W0302': ('Too many lines in module (%s)',
+    'C0302': ('Too many lines in module (%s)', # was W0302
               'Used when a module has too much lines, reducing its readibility.'
               ),
 
     'W0311': ('Bad indentation. Found %s %s, expected %s',
-              'Used when an unexpected number of indentation\'s tabulations or\
-               spaces has been found.'),
+              'Used when an unexpected number of indentation\'s tabulations or '
+              'spaces has been found.'),
     'W0312': ('Found indentation with %ss instead of %ss',
               'Used when there are some mixed tabs and spaces in a module.'),
 
     'F0321': ('Format detection error in %r',
-              'Used when an unexpected error occured in bad format detection.\
-              Please report the error if it occurs.'),
+              'Used when an unexpected error occured in bad format detection.'
+              'Please report the error if it occurs.'),
     'C0321': ('More than one statement on a single line',
               'Used when more than on statement are found on the same line.'),
     'C0322': ('Operator not preceded by a space\n%s',
-              'Used when one of the following operator (!= | <= | == | >= | < \
-              | > | = | \+= | -= | \*= | /= | %) is not preceded by a space.'),
+              'Used when one of the following operator (!= | <= | == | >= | < '
+              '| > | = | \+= | -= | \*= | /= | %) is not preceded by a space.'),
     'C0323': ('Operator not followed by a space\n%s',
-              'Used when one of the following operator (!= | <= | == | >= | < \
-              | > | = | \+= | -= | \*= | /= | %) is not followed by a space.'),
+              'Used when one of the following operator (!= | <= | == | >= | < '
+              '| > | = | \+= | -= | \*= | /= | %) is not followed by a space.'),
     'C0324': ('Comma not followed by a space\n%s',
               'Used when a comma (",") is not followed by a space.'),
     
@@ -65,9 +63,12 @@ MSGS = {
               'Used when the deprecated "<>" operator is used instead \
               of "!=".'),
     'W0332': ('Use l as long integer identifier',
-              'Used when a lower case "l" is used to mark a long integer. You \
-should use a upper case "L" since the letter "l" looks too much like the digit \
-"1"'),
+              'Used when a lower case "l" is used to mark a long integer. You '
+              'should use a upper case "L" since the letter "l" looks too much '
+              'like the digit "1"'),
+    'W0333': ('Use of the `` operator',
+              'Used when the deprecated "``" (backtick) operator is used '
+              'instead  of the str() function.'),
     }
 
 # simple quoted string rgx
@@ -76,14 +77,14 @@ SQSTRING_RGX = r'"([^"\\]|\\.)*("|\\$)'
 TQSTRING_RGX = r'"""([^"]|"(?!""))*("""|$)'
 # simple apostrophed rgx
 SASTRING_RGX = r"'([^'\\]|\\.)*('|\\$)"
-# triple apostrophed string rgx # FIXMY english please
+# triple apostrophed string rgx # FIXME english please
 TASTRING_RGX = r"'''([^']|'(?!''))*('''|$)"
 
 # finally, the string regular expression
 STRING_RGX = re.compile('%s|%s|%s|%s' % (TQSTRING_RGX, TASTRING_RGX,
-                                         SQSTRING_RGX, SASTRING_RGX))
+                                         SQSTRING_RGX, SASTRING_RGX), re.M)
 
-COMMENT_RGX = re.compile("#.*$")
+COMMENT_RGX = re.compile("#.*$", re.M)
 
 OPERATORS = r'!=|<=|==|>=|<|>|=|\+=|-=|\*=|/=|%'
 
@@ -99,16 +100,16 @@ BAD_CONSTRUCT_RGXS = (
 ##      re.compile(r':\s*[^\s]+.*'),
 ##      'C0321'),
     
-    (re.compile(OP_RGX_MATCH_1),
-     re.compile(OP_RGX_SEARCH_1),
+    (re.compile(OP_RGX_MATCH_1, re.M),
+     re.compile(OP_RGX_SEARCH_1, re.M),
      'C0322'),
     
-    (re.compile(OP_RGX_MATCH_2),
-     re.compile(OP_RGX_SEARCH_2),
+    (re.compile(OP_RGX_MATCH_2, re.M),
+     re.compile(OP_RGX_SEARCH_2, re.M),
      'C0323'),
     
-    (re.compile(r'.*,[^\s)].*'),
-     re.compile(r',[^\s)]'),
+    (re.compile(r'.*,[^\s)].*', re.M),
+     re.compile(r',[^\s)]', re.M),
      'C0324'),
     )
 
@@ -246,40 +247,57 @@ class FormatChecker(BaseRawChecker):
                 # "indents" stack was seeded
                 check_equal = 0
                 self.check_indent_level(line, indents[-1], line_num)
-                    
+        line_num -= 1 # to be ok with "wc -l"
         if line_num > self.config.max_module_lines:
-            self.add_message('W0302', args=line_num)
+            self.add_message('C0302', args=line_num, line=1)
 
     def visit_default(self, node):
         """check the node line number and check it if not yet done
         """
         if not node.is_statement():
-            return
+            return            
         prev_sibl = node.previous_sibling()
         if prev_sibl is not None:
             # don't use .source_line since it causes C0321 false positive !
-            prev_line = prev_sibl.lineno
+            prev_line = prev_sibl.fromlineno
+            # discard discard nodes introducted by ending ";"
+            if isinstance(node, nodes.Discard) and \
+                   isinstance(node.expr, nodes.Const) and \
+                   node.expr.lineno is None:
+                prev_line = None
         else:
             # itou ?
-            prev_line = node.parent.statement().lineno
-        line = node.source_line()
+            try:
+                prev_line = node.parent.statement().fromlineno
+            except AttributeError:
+                prev_line = node.parent.statement().lineno
+        line = node.fromlineno #source_line()
         if prev_line == line and self._visited_lines.get(line) != 2:
             self.add_message('C0321', node=node)
             self._visited_lines[line] = 2
             return
         if self._visited_lines.has_key(line):
             return
-        self._visited_lines[line] = 1
-        #print 'checking line', self._lines[line]
+        lines = []
+        for line in xrange(node.fromlineno, node.tolineno + 1):
+            self._visited_lines[line] = 1
+            try:
+                lines.append(self._lines[line].rstrip())
+            except KeyError:
+                lines.append('')
+        #print 'check', '\n'.join(lines)
         #print node
         try:
-            msg_def = check_line(self._lines[line], self)
+            msg_def = check_line('\n'.join(lines), self)
             if msg_def:
-                self.add_message(msg_def[0], node = node, args=msg_def[1])
+                self.add_message(msg_def[0], node=node, args=msg_def[1])
         except KeyError:
             # FIXME: internal error !
             pass
 
+    def visit_backquote(self, node):
+        self.add_message('W0333', node=node)
+        
     def check_lines(self, lines, i):
         """check lines have less than a maximum number of characters
         """

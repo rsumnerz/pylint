@@ -1,4 +1,4 @@
-# Copyright (c) 2003-2005 LOGILAB S.A. (Paris, FRANCE).
+# Copyright (c) 2003-2006 LOGILAB S.A. (Paris, FRANCE).
 # http://www.logilab.fr/ -- mailto:contact@logilab.fr
 #
 # This program is free software; you can redistribute it and/or modify it under
@@ -20,8 +20,6 @@
  FIXME: missing 13, 15, 16
 """
 
-__revision__ = "$Id: design_analysis.py,v 1.11 2005-12-30 15:41:29 adim Exp $"
-
 from logilab.astng import Function, InferenceError
 
 from pylint.interfaces import IASTNGChecker
@@ -40,18 +38,24 @@ def class_is_abstract(klass):
 
 MSGS = {
     'R0901': ('Too many ancestors (%s/%s)',
-              'Used when class has too many parent classes.'),
+              'Used when class has too many parent classes, try to reduce \
+              this to get a more simple (and so easier to use) class.'),
     'R0902': ('Too many instance attributes (%s/%s)',
-              'Used when class has too many instance attributes.'),
-    'R0903': ('Not enough public methods (%s/%s)',
-              'Used when class has not enough public methods.'),
+              'Used when class has too many instance attributes, try to reduce \
+              this to get a more simple (and so easier to use) class.'),
+    'R0903': ('Too few public methods (%s/%s)',
+              'Used when class has too few public methods, so be sure it\'s \
+              really worth it.'),
     'R0904': ('Too many public methods (%s/%s)',
-              'Used when class has too many public methods.'),
+              'Used when class has too many public methods, try to reduce \
+              this to get a more simple (and so easier to use) class.'),
     
     'R0911': ('Too many return statements (%s/%s)',
-              'Used when a function or method has too many return statement.'),
+              'Used when a function or method has too many return statement, \
+              making it hard to follow.'),
     'R0912': ('Too many branches (%s/%s)',
-              'Used when a function or method has too many branches.'),
+              'Used when a function or method has too many branches, \
+              making it hard to follow.'),
     'R0913': ('Too many arguments (%s/%s)',
               'Used when a function or method takes too many arguments.'),
     'R0914': ('Too many local variables (%s/%s)',
@@ -266,10 +270,14 @@ class MisdesignChecker(BaseChecker):
 
     def visit_return(self, _):
         """count number of returns/yields"""
+        if not self._returns:
+            return # return outside function, reported by the base checker
         self._returns[-1] += 1
         
     def visit_yield(self, _):
         """count number of returns/yields"""
+        if not self._returns:
+            return # yield outside function, reported by the base checker
         self._returns[-1] += 1
         
     def visit_default(self, node):

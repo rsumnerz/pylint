@@ -1,4 +1,4 @@
-# Copyright (c) 2003-2005 LOGILAB S.A. (Paris, FRANCE).
+# Copyright (c) 2003-2006 LOGILAB S.A. (Paris, FRANCE).
 # http://www.logilab.fr/ -- mailto:contact@logilab.fr
 #
 # This program is free software; you can redistribute it and/or modify it under
@@ -26,9 +26,12 @@ Base id of standard checkers (used in msg and report ids):
 08: similar
 09: design_analysis
 10: newstyle
-"""
+11: typecheck
+12: rpython
 
-__revision__ = "$Id: __init__.py,v 1.21 2005-11-21 23:08:11 syt Exp $"
+The raw_metrics checker has no number associated since it doesn't emit any
+messages nor reports. XXX not true, emit a 07 report !
+"""
 
 import tokenize
 from os import listdir
@@ -65,6 +68,7 @@ class BaseChecker(OptionsProviderMixIn, ASTWalker):
 
     options = ()
     priority = -9
+    enabled = True
     may_be_disabled = True
     name = None
     
@@ -75,13 +79,6 @@ class BaseChecker(OptionsProviderMixIn, ASTWalker):
         """
         ASTWalker.__init__(self, self)
         self.name = self.name.lower()
-        if self.may_be_disabled:
-            opt_name = 'enable-' + self.name
-            self.options = (
-                (opt_name,
-                 {'type' : 'yn', 'default' : 1, 'metavar': '<y_or_n>',
-                  'help' : "Enable / disable this checker"})
-                ,) + self.options            
         OptionsProviderMixIn.__init__(self)
         self.linter = linter
         
@@ -91,16 +88,17 @@ class BaseChecker(OptionsProviderMixIn, ASTWalker):
 
     def is_enabled(self):
         """return true if the checker is enabled"""
-        opt = 'enable_' + self.name
-        return getattr(self.config, opt, 1)
+        return self.enabled
 
-    def enable(self, enable):
+    def enable(self, enabled):
         """enable / disable this checker if true / false is given
 
         it false values has no effect if the checker can't be disabled
         """
-        if self.may_be_disabled:
-            setattr(self.config, 'enable_' + self.name, enable)
+        if not enabled and not self.may_be_disabled:
+            raise Exception("can't disable %s checker" % self.name)
+        if enabled or self.may_be_disabled:
+            self.enabled = enabled
         
     def package_dir(self):
         """return the base directory for the analysed package"""

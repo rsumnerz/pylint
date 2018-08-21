@@ -16,19 +16,23 @@
 """try to find more bugs in the code using astng inference capabilities
 """
 
-__revision__ = "$Id: typecheck.py,v 1.12 2006-04-19 16:16:20 syt Exp $"
-
+from logilab.common.compat import set
 from logilab import astng
 
 from pylint.interfaces import IASTNGChecker
 from pylint.checkers import BaseChecker
+from pylint.checkers.utils import safe_infer, is_super, display_type
 
 MSGS = {
     'E1101': ('%s %r has no %r member',
-              'Used when a class is accessed for an unexistant member.'),
+              'Used when a variable is accessed for an unexistant member.'),
     'E1102': ('%s is not callable',
               'Used when an object being called has been infered to a non \
               callable object'),
+    'E1103': ('%s %r has no %r member (but some types could not be inferred)',
+              'Used when a variable is accessed for an unexistant member, but \
+              astng was not able to interpret all possible types of this \
+              variable.'),
     'E1111': ('Assigning to function call which doesn\'t return',
               'Used when an assigment is done on a function call but the \
               infered function doesn\'t return anything.'),
@@ -36,7 +40,6 @@ MSGS = {
               'Used when an assigment is done on a function call but the \
               infered function returns nothing but None.'),
     }
-
 
 class TypeChecker(BaseChecker):
     """try to find bugs in the code using type inference
@@ -50,81 +53,114 @@ class TypeChecker(BaseChecker):
     msgs = MSGS
     priority = -1
     # configuration options
-    options = (
-               ('ignore-mixin-members',
+    options = (('ignore-mixin-members',
                 {'default' : True, 'type' : 'yn', 'metavar': '<y_or_n>',
                  'help' : 'Tells wether missing members accessed in mixin \
 class should be ignored. A mixin class is detected if its name ends with \
 "mixin" (case insensitive).'}
                 ),
-               
+
+               ('ignored-classes',
+                {'default' : ('SQLObject',),
+                 'type' : 'csv',
+                 'metavar' : '<members names>',
+                 'help' : 'List of classes names for which member attributes \
+should not be checked (useful for classes with attributes dynamicaly set).'}
+                 ),
+
                ('zope',
                 {'default' : False, 'type' : 'yn', 'metavar': '<y_or_n>',
-                 'help' : 'When zope mode is activated, consider the \
-acquired-members option to ignore access to some undefined attributes.'}
+                 'help' : 'When zope mode is activated, add a predefined set \
+of Zope acquired attributes to generated-members.'}
                 ),
-               ('acquired-members',
+               ('generated-members',
                 {'default' : (
         'REQUEST', 'acl_users', 'aq_parent'),
                  'type' : 'csv',
                  'metavar' : '<members names>',
-                 'help' : 'List of members which are usually get through \
-zope\'s acquisition mecanism and so shouldn\'t trigger E0201 when accessed \
-(need zope=yes to be considered.'}
+                 'help' : 'List of members which are set dynamically and \
+missed by pylint inference system, and so shouldn\'t trigger E0201 when \
+accessed.'}
                 ),
         )
-
+    def __init__(self, linter=None):
+        BaseChecker.__init__(self, linter)
+        self.generated_members = list(self.config.generated_members)
+        if self.config.zope:
+            self.generated_members.extend(('REQUEST', 'acl_users', 'aq_parent'))
+            
     def visit_getattr(self, node):
-        """check that the accessed attribute exists"""
-        # if we are running in zope mode, is it an acquired attribute ?
-        if self.config.zope and node.attrname in self.config.acquired_members:
+        """check that the accessed attribute exists
+
+        to avoid to much false positives for now, we'll consider the code as
+        correct if a single of the infered nodes has the accessed attribute.
+
+        function/method, super call and metaclasses are ignored
+        """
+        if node.attrname in self.config.generated_members:
+            # attribute is marked as generated, stop here
             return
         try:
             infered = list(node.expr.infer())
-            for owner in infered:
-                # skip yes object
-                if owner is astng.YES:
-                    continue
-                # if there is ambiguity, skip None
-                if len(infered) > 1 and isinstance(owner, astng.Const) \
-                       and owner.value is None:
-                    continue
-                # XXX "super" call
-                owner_name = getattr(owner, 'name', 'None')
-                if owner_name == 'super' and \
-                   owner.root().name == '__builtin__':
-                    continue
-                if getattr(owner, 'type', None) == 'metaclass':
-                    continue
-                if self.config.ignore_mixin_members \
-                       and owner_name[-5:].lower() == 'mixin':
-                    continue
-                #print owner.name, owner.root().name
-                try:
-                    owner.getattr(node.attrname)
-                except AttributeError:
-                    # XXX method / function
-                    continue
-                except astng.NotFoundError:
-                    if isinstance(owner, astng.Instance):
-                        if hasattr(owner, 'has_dynamic_getattr') and owner.has_dynamic_getattr():
-                            continue
-                        # XXX
-                        if getattr(owner, 'name', None) == 'Values' and \
-                               owner.root().name == 'optparse':
-                            continue
-                        _type = 'Instance of'
-                    elif isinstance(owner, astng.Module):
-                        _type = 'Module'
-                    else:
-                        _type = 'Class'
-                    self.add_message('E1101', node=node,
-                                     args=(_type, owner_name, node.attrname))
-                # XXX: stop on the first found
-                # this is a bad solution to fix func_noerror_socket_member.py
-                break
         except astng.InferenceError:
-            pass
+            return
+        # list of (node, nodename) which are missing the attribute
+        missingattr = set()
+        ignoremim = self.config.ignore_mixin_members
+        inference_failure = False
+        for owner in infered:
+            # skip yes object
+            if owner is astng.YES:
+                inference_failure = True
+                continue
+            # skip None anyway
+            if isinstance(owner, astng.Const) and owner.value is None:
+                continue
+            # XXX "super" / metaclass call
+            if is_super(owner) or getattr(owner, 'type', None) == 'metaclass':
+                continue
+            name = getattr(owner, 'name', 'None')
+            if name in self.config.ignored_classes:
+                continue
+            if ignoremim and name[-5:].lower() == 'mixin':
+                continue
+            try:
+                owner.getattr(node.attrname)
+            except AttributeError:
+                # XXX method / function
+                continue
+            except astng.NotFoundError, ex:
+                if isinstance(owner, astng.Instance) \
+                       and owner.has_dynamic_getattr():
+                    continue
+                # explicit skipping of optparse'Values class
+                if owner.name == 'Values' and \
+                       owner.root().name in ('optik', 'optparse'):
+                    continue
+                missingattr.add((owner, name))
+                continue
+            # stop on the first found
+            break
+        else:
+            # we have not found any node with the attributes, display the
+            # message for infered nodes
+            done = set()
+            for owner, name in missingattr:
+                if isinstance(owner, astng.Instance):
+                    actual = owner._proxied
+                else:
+                    actual = owner
+                if actual in done:
+                    continue
+                done.add(actual)
+                if inference_failure:
+                    msgid = 'E1103'
+                else:
+                    msgid = 'E1101'
+                self.add_message(msgid, node=node,
+                                 args=(display_type(owner), name,
+                                       node.attrname))
+
 
     def visit_assign(self, node):
         """check that if assigning to a function call, the function is
@@ -132,7 +168,7 @@ zope\'s acquisition mecanism and so shouldn\'t trigger E0201 when accessed \
         """
         if not isinstance(node.expr, astng.CallFunc):
             return
-        function_node = self._safe_infer(node.expr.node)
+        function_node = safe_infer(node.expr.node)
         # skip class, generator and uncomplete function definition
         if not (isinstance(function_node, astng.Function) and
                 function_node.root().fully_defined()):
@@ -155,26 +191,11 @@ zope\'s acquisition mecanism and so shouldn\'t trigger E0201 when accessed \
     def visit_callfunc(self, node):
         """check that called method are infered to callable objects
         """
-        called = self._safe_infer(node.node)
+        called = safe_infer(node.node)
         # only function, generator and object defining __call__ are allowed
         if called is not None and not called.callable():
             self.add_message('E1102', node=node, args=node.node.as_string())
         
-    def _safe_infer(self, node):
-        """return the infered value for the given node.
-        Return None if inference failed or if there is some ambiguity (more than
-        one node has been infered)
-        """
-        try:
-            inferit = node.infer()
-            value = inferit.next()
-        except astng.InferenceError:
-            return
-        try:
-            inferit.next()
-            return # None if there is ambiguity on the infered node
-        except StopIteration:
-            return value
     
 def register(linter):
     """required method to auto register this checker """
