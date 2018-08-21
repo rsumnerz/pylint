@@ -329,6 +329,7 @@ def run(argv=None):
     for filename in args:
         sim.append_stream(filename, open(filename))
     sim.run()
+    sys.exit(0)
 
 if __name__ == '__main__':
-    run()
+    Run()

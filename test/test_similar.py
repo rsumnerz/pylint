@@ -12,6 +12,8 @@ class SimilarTC(unittest.TestCase):
         try:
             similar.run(['--ignore-comments', 'input/similar1', 'input/similar2'])
             output = sys.stdout.getvalue()
+        else:
+            self.fail('not system exit')
         finally:
             sys.stdout = sys.__stdout__
         self.assertEquals(output.strip(), """
