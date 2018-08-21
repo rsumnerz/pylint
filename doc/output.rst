@@ -33,7 +33,7 @@ C
 category
     fullname of the message category
 
-For exemple the former (pre 1.0) default format can be obtained with::
+For example, the former (pre 1.0) default format can be obtained with::
 
   pylint --msg-template='{msg_id}:{line:3d},{column}: {obj}: {msg}'
 
@@ -51,6 +51,9 @@ A few other examples:
 
     {path}:{line}: [{msg_id}({symbol}), {obj}] {msg}
 
+* HTML output (Default for the html output format) format::
+
+    '{category}{module}{obj}{line}{column}{msg}'
 
 
 .. _Python new format syntax: http://docs.python.org/2/library/string.html#formatstrings

@@ -13,6 +13,7 @@ https://bitbucket.org/logilab/pylint
    output
    message-control
    features
+   extensions
    options
    extend
    ide-integration
@@ -24,6 +25,9 @@ https://bitbucket.org/logilab/pylint
    wiki
    backlinks
    installation
+
+   changelog
+
 
 
 Content wanted

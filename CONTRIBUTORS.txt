@@ -1,4 +1,4 @@
-Contributors
+﻿Contributors
 ------------
 
 Order doesn't matter (not that much, at least ;)
@@ -35,6 +35,28 @@ Order doesn't matter (not that much, at least ;)
 * David Shea: invalid sequence and slice index
 
 * Carl Crowder: don't evaluate the value of arguments for 'dangerous-default-value'
+
+* Michal Nowikowski: wrong-spelling-in-comment, wrong-spelling-in-docstring,
+  parallel execution on multiple CPUs and other patches.
+
+* David Lindquist: logging-format-interpolation warning.
+
+* Brett Cannon: Port source code to be Python 2/3 compatible, Python 3
+  checker.
+
+* Vlad Temian: redundant-unittest-assert and the JSON reporter.
+
+* Cosmin Poieană: unichr-builtin and improvements to bad-open-mode.
+
+* Viorel Știrbu: intern-builtin warning.
+
+* Dan Goldsmith: support for msg-template in HTML reporter.
+
+* Chris Rebert: unidiomatic-typecheck.
+
+* Steven Myint: duplicate-except.
+
+* Radu Ciorba: not-context-manager and confusing-with-statement warnings.
 
 * Wolfgang Grafen, Axel Muller, Fabio Zadrozny, Pierre Rouleau,
   Maarten ter Huurne, Mirko Friedenhagen and all the Logilab's team (among others):

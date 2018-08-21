@@ -1,5 +1,7 @@
 .. -*- coding: utf-8 -*-
 
+.. _faq:
+
 ==========================
 Frequently Asked Questions
 ==========================
@@ -65,10 +67,22 @@ Pylint from the repository, simply invoke ::
 -----------------------------------
 
 Pylint requires the latest `astroid`_ and `logilab-common`_ packages. It should be
-compatible with any Python version greater than 2.5.0.
+compatible with any Python version greater than 2.7.0.
 
 .. _`astroid`: https://bitbucket.org/logilab/astroid
 .. _`logilab-common`: http://www.logilab.org/project/logilab-common
+
+2.4 What versions of Python is Pylint supporting?
+--------------------------------------------------
+
+Since Pylint 1.4, we support only Python 2.7+ and Python 3.3+.
+Using this strategy really helps in maintaining a code base compatible
+with both versions and from this benefits not only the maintainers,
+but the end users as well, because it's easier to add and test
+new features.
+If support for Python 2.6 is absolutely required, then the version
+from pylint-1.3 branch can be used. It will receive backports of
+bug fixes for a while.
 
 
 3. Running Pylint
@@ -169,7 +183,6 @@ No, starting from 0.25.3, you can use symbolic names for messages::
 
     # pylint: disable=fixme, line-too-long
 
-You can show these symbols in the output with the `-sy` option.
 
 4.5 I have a callback function where I have no control over received arguments. How do I avoid getting unused argument warnings?
 ----------------------------------------------------------------------------------------------------------------------------------
@@ -192,54 +205,17 @@ tricks like: ::
      method-hidden,
      too-many-lines
 
-4.7 Why do I get a lot of spurious "unused variables messages" when using psyobj from psyco_?
-----------------------------------------------------------------------------------------------
-
-This is actually due to a bug in psyco, making the locals()
-function for objects inheriting from *psyobj* returning an empty
-dictionary. For the moment, the only way to fix this is to use the
-PYLINT_IMPORT environment variable to not use psyco during Pylint
-checking. Sample code ::
-
-	import os
-	try:
-		if os.environ.has_key('PYLINT_IMPORT'):
-			raise ImportError()
-	from psyco.classes import psyobj
-	except ImportError:
-		class psyobj:
-			pass
-
-NOTICE: this problem should not occur with Pylint >= 0.5 since from
-this version Pylint is not looking anymore for information in living
-objects (i.e. it no longer imports analysed modules)
-
-.. _psyco: http://psyco.sf.net
-
 5. Classes and Inheritance
 ==========================
 
-5.1 When is Pylint considering a class as an interface?
--------------------------------------------------------
 
-A class is considered as an interface if there is a class named "Interface"
-somewhere in its inheritance tree.
-
-5.2 When is Pylint considering that a class is implementing a given interface?
---------------------------------------------------------------------------------
-
-Pylint is using the Zope 2 interfaces conventions, and so is
-considering that a class is implementing interfaces listed in its
-__implements__ attribute.
-
-
-5.3 When is Pylint considering a class as an abstract class?
+5.1 When is Pylint considering a class as an abstract class?
 -------------------------------------------------------------
 
 A class is considered as an abstract class if at least one of its
 methods is doing nothing but raising NotImplementedError.
 
-5.4 How do I avoid "access to undefined member" messages in my mixin classes?
+5.2 How do I avoid "access to undefined member" messages in my mixin classes?
 -------------------------------------------------------------------------------
 
 To do so you have to set the ignore-mixin-members option to
@@ -259,7 +235,7 @@ lower bound on it. By default, the formula to calculate score is ::
     10.0 - ((float(5 * error + warning + refactor + convention) / statement) * 10)
 
 However, this option can be changed in the Pylint rc file. If having negative
-values really bugs you, you can set the formula to be the minimum of 0 and the
+values really bugs you, you can set the formula to be the maximum of 0 and the
 above expression.
 
 
@@ -272,12 +248,25 @@ mangled sys.path.  Pylint doesn't import any of the candidate modules and
 thus doesn't include any of import's side effects (good and bad).  It
 traverses an AST representation of the code.
 
-6.3 I think I found a bug in Pylint. What should I do?
+6.3 Pylint keeps crashing with `Maximum recursion depth exceeded`
+-----------------------------------------------------------------
+
+Pylint can crash with this error if you have a string in your analyzed
+program, created by joining a lot of strings with the addition operator.
+Due to how Pylint works, visiting nodes on a AST tree and due to how
+the BinOp node is represented (the node which represents the string '1+1'
+for instance), the same visit method will be called over and over again, leading
+to a maximum recursion error. You can alleviate this problem by passing
+the flag `--optimize-ast=y` to Pylint. This will activate an optimization
+which will transform such AST subtrees into the final resulting string.
+This flag is off by default. If this is not the case, please report a bug!
+
+6.4 I think I found a bug in Pylint. What should I do?
 -------------------------------------------------------
 
 Read http://docs.pylint.org/contribute#bug-reports-feedback
 
-6.4 I have a question about Pylint that isn't answered here.
+6.5 I have a question about Pylint that isn't answered here.
 ------------------------------------------------------------
 
 Read http://docs.pylint.org/contribute#mailing-lists

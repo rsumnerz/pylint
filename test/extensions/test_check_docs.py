@@ -1,7 +1,7 @@
 """Unit tests for the pylint checkers in :mod:`pylint.extensions.check_docs`,
 in particular the Sphinx parameter documentation checker `SphinxDocChecker`
 """
-from __future__ import division, print_function
+from __future__ import division, print_function, absolute_import
 
 import unittest
 
@@ -68,7 +68,7 @@ class SpinxDocCheckerTest(CheckerTestCase):
         return values
         """
         node = test_utils.extract_node("""
-        def function_foo(xarg, yarg):
+        def function_foo(xarg, yarg, zarg):
             '''function foo ...
 
             :param xarg: bla xarg
@@ -76,6 +76,8 @@ class SpinxDocCheckerTest(CheckerTestCase):
 
             :param yarg: bla yarg
             :type yarg: float
+
+            :param int zarg: bla zarg
 
             :return: sum
             :rtype: float
@@ -90,7 +92,7 @@ class SpinxDocCheckerTest(CheckerTestCase):
         signature and in the documentation
         """
         node = test_utils.extract_node("""
-        def function_foo(xarg, yarg):
+        def function_foo(xarg, yarg, zarg):
             '''function foo ...
 
             :param xarg1: bla xarg
@@ -98,6 +100,8 @@ class SpinxDocCheckerTest(CheckerTestCase):
 
             :param yarg: bla yarg
             :type yarg1: float
+
+            :param str zarg1: bla zarg
             '''
             return xarg + yarg
         """)
@@ -105,11 +109,11 @@ class SpinxDocCheckerTest(CheckerTestCase):
             Message(
                 msg_id='missing-sphinx-param',
                 node=node,
-                args=('xarg, xarg1',)),
+                args=('xarg, xarg1, zarg, zarg1',)),
             Message(
                 msg_id='missing-sphinx-type',
                 node=node,
-                args=('yarg, yarg1',))
+                args=('yarg, yarg1, zarg',)),
         ):
             self.checker.visit_function(node)
 
